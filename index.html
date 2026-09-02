@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Controle de Ferramentas / 工具管理</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=Noto+Sans+JP:wght@500;600;700&display=swap');
+
+:root{
+  --bg: #17191c;
+  --panel: #202327;
+  --panel-2: #262a2f;
+  --line: #34383e;
+  --amber: #ffb100;
+  --amber-dim: #7a5c14;
+  --blue: #4fa3ff;
+  --text: #eceae5;
+  --muted: #8b9099;
+  --danger: #ff5d5d;
+  --good: #5ad18a;
+  --highlight: #ffd76a;
+}
+
+*{box-sizing:border-box;}
+html{ color-scheme: dark; }
+html,body{margin:0;padding:0;}
+body{
+  background: var(--bg) !important;
+  color: var(--text);
+  font-family: 'IBM Plex Mono', 'Noto Sans JP', monospace;
+  min-height: 100vh;
+  padding: 16px 14px 60px;
+}
+.wrap{ max-width: 480px; margin: 0 auto; }
+
+header{
+  display:flex; align-items:center; gap:12px;
+  margin-bottom: 14px; padding-bottom: 14px;
+  border-bottom: 2px solid var(--amber);
+}
+.badge{
+  width:42px; height:42px; flex:0 0 auto;
+  border:2px solid var(--amber); border-radius: 6px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Oswald',sans-serif; font-weight:700; color:var(--amber); font-size: 18px;
+}
+.htext{ flex:1; min-width:0; }
+h1{
+  font-family:'Oswald','Noto Sans JP',sans-serif;
+  font-weight:700; font-size: 15px;
+  letter-spacing: 0.3px; margin:0; text-transform: uppercase;
+}
+header p{ margin: 2px 0 0; color: var(--muted); font-size: 10.5px; }
+
+.langswitch{ display:flex; flex:0 0 auto; border: 1px solid var(--line); border-radius: 6px; overflow:hidden; }
+.langswitch button{
+  background: var(--panel); color: var(--muted); border:none;
+  font-family: 'Noto Sans JP', 'IBM Plex Mono', sans-serif;
+  font-size: 12px; font-weight: 600; padding: 8px 10px; cursor:pointer;
+}
+.langswitch button.active{ background: var(--amber); color: #1a1a1a; }
+
+/* ---- barra de ações utilitárias ---- */
+.util-bar{
+  display:grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.util-btn{
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', 'Noto Sans JP', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 10px 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align:center;
+  line-height:1.3;
+}
+.util-btn.report{ color: var(--blue); border-color: rgba(79,163,255,0.4); }
+.util-btn:active{ background: var(--panel-2); }
+#restoreFile{ display:none; }
+
+/* ---- botão principal: nova ferramenta ---- */
+.add-btn{
+  width:100%;
+  background: var(--panel);
+  border: 2px dashed var(--line);
+  color: var(--amber);
+  font-family: 'IBM Plex Mono', 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.add-btn:active{ background: var(--panel-2); }
+
+/* ---- formulário / modal ---- */
+.form-card{
+  background: var(--panel);
+  border: 2px solid var(--amber-dim);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 14px;
+  display:none;
+}
+.form-card.open{ display:block; }
+.form-card .card-title{
+  font-family:'Oswald','Noto Sans JP',sans-serif;
+  font-size: 12px; font-weight:600; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--amber); margin: 0 0 12px;
+}
+.field{ margin-bottom: 12px; }
+.field:last-child{ margin-bottom: 0; }
+.field label{ display:block; font-size: 11.5px; color: var(--muted); margin-bottom: 5px; }
+.field input, .field select, .field textarea{
+  width:100%;
+  background: #0d0f11;
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-family:'IBM Plex Mono', 'Noto Sans JP', monospace;
+  font-size: 15px;
+  padding: 10px 11px;
+  border-radius: 6px;
+  outline:none;
+}
+.field textarea{ resize: vertical; min-height: 50px; }
+.field input:focus, .field select:focus, .field textarea:focus{ border-color: var(--blue); }
+.formrow{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.accessory-section{
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+.accessory-title{
+  font-size: 11px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 1px; margin: 0 0 10px; font-weight:600;
+}
+.checkrow{
+  display:flex; align-items:flex-start; gap:8px;
+  font-size: 12.5px; color: var(--text);
+  margin: 4px 0 10px;
+  cursor:pointer;
+}
+.checkrow input{ margin-top: 2px; flex:0 0 auto; width:auto; }
+
+/* ---- bloco de acessórios no card ---- */
+.accessory-block{
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+.accessory-row{
+  display:flex; justify-content:space-between; align-items:center;
+  font-size: 12px; padding: 4px 0;
+}
+.accessory-row .k{ color: var(--muted); }
+.accessory-row .v{ color: var(--text); font-weight:600; }
+.collet-row{
+  display:flex; justify-content:space-between; align-items:center; gap:8px;
+  margin-top: 4px;
+}
+.collet-info{ font-size: 12px; flex:1; min-width:0; }
+.collet-info .k{ color: var(--muted); }
+.collet-status{
+  font-size: 10px; font-weight:700; letter-spacing:0.3px; text-transform:uppercase;
+  padding: 2px 7px; border-radius: 5px; margin-left:6px;
+}
+.collet-status.ok{ background: rgba(90,209,138,0.15); color: var(--good); border:1px solid rgba(90,209,138,0.4); }
+.collet-status.warn{ background: rgba(255,177,0,0.15); color: var(--amber); border:1px solid rgba(255,177,0,0.4); }
+.collet-status.danger{ background: rgba(255,93,93,0.15); color: var(--danger); border:1px solid rgba(255,93,93,0.4); }
+.small-btn.collet{ background: transparent; color: var(--good); border: 1px solid rgba(90,209,138,0.4); flex:0 0 auto; }
+.form-actions{ display:flex; gap:10px; margin-top: 14px; }
+.btn{
+  flex:1;
+  padding: 11px;
+  border-radius: 7px;
+  border: none;
+  font-family: 'IBM Plex Mono', 'Noto Sans JP', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.btn.primary{ background: var(--amber); color: #1a1a1a; }
+.btn.ghost{ background: transparent; color: var(--muted); border: 1px solid var(--line); }
+
+/* ---- overlay modal (troca de ferramenta) ---- */
+.overlay{
+  display:none;
+  position: fixed; inset:0;
+  background: rgba(0,0,0,0.6);
+  z-index: 50;
+  align-items:flex-end;
+  justify-content:center;
+}
+.overlay.open{ display:flex; }
+.modal{
+  background: var(--panel);
+  border: 2px solid var(--amber);
+  border-radius: 14px 14px 0 0;
+  padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+  width: 100%;
+  max-width: 480px;
+  animation: slideUp 0.18s ease-out;
+}
+@keyframes slideUp{ from{ transform: translateY(20px); opacity:0; } to{ transform: translateY(0); opacity:1; } }
+.modal .card-title{
+  font-family:'Oswald','Noto Sans JP',sans-serif;
+  font-size: 13px; font-weight:700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--amber); margin: 0 0 4px;
+}
+.modal .modal-sub{ font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+
+/* ---- lista de ferramentas ---- */
+.empty{
+  text-align:center;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 30px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+}
+
+.filter-bar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.filter-bar label{ font-size: 11.5px; color: var(--muted); white-space:nowrap; }
+.filter-bar select{
+  flex:1;
+  background: #0d0f11;
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-family:'IBM Plex Mono', 'Noto Sans JP', monospace;
+  font-size: 13px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  outline:none;
+}
+.part-badge{
+  display:inline-block;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--blue);
+  background: rgba(79,163,255,0.12);
+  border: 1px solid rgba(79,163,255,0.35);
+  border-radius: 5px;
+  padding: 2px 7px;
+  margin-top: 4px;
+}
+
+.tool-card{
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.tool-top{
+  display:flex; justify-content:space-between; align-items:flex-start;
+  margin-bottom: 10px;
+}
+.tool-name{ font-size: 15px; font-weight: 700; color: var(--text); word-break: break-word; }
+.tool-meta{ font-size: 11px; color: var(--muted); margin-top: 2px; }
+.status-pill{
+  flex: 0 0 auto;
+  font-size: 10px; font-weight:700; letter-spacing:0.4px; text-transform:uppercase;
+  padding: 3px 8px; border-radius: 5px; white-space:nowrap; margin-left: 8px;
+}
+.status-pill.ok{ background: rgba(90,209,138,0.15); color: var(--good); border:1px solid rgba(90,209,138,0.4); }
+.status-pill.warn{ background: rgba(255,177,0,0.15); color: var(--amber); border:1px solid rgba(255,177,0,0.4); }
+.status-pill.danger{ background: rgba(255,93,93,0.15); color: var(--danger); border:1px solid rgba(255,93,93,0.4); }
+
+.bar-track{
+  background: #0d0f11;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  height: 14px;
+  overflow: hidden;
+  margin-bottom: 6px;
+  position: relative;
+}
+.bar-fill{ height: 100%; border-radius: 5px 0 0 5px; transition: width 0.25s ease; }
+.bar-fill.ok{ background: var(--good); }
+.bar-fill.warn{ background: var(--amber); }
+.bar-fill.danger{ background: var(--danger); }
+
+.bar-numbers{
+  display:flex; justify-content:space-between;
+  font-size: 12px; color: var(--muted); margin-bottom: 12px;
+}
+.bar-numbers b{ color: var(--text); }
+
+.tool-actions{ display:flex; gap: 8px; flex-wrap: wrap; }
+.quickadd{ display:flex; gap:6px; flex: 1 1 140px; }
+.quickadd input{
+  width: 100%;
+  background: #0d0f11;
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-family:'IBM Plex Mono', monospace;
+  font-size: 14px;
+  padding: 8px 9px;
+  border-radius: 6px;
+  outline:none;
+  text-align:right;
+}
+.quickadd input:focus{ border-color: var(--blue); }
+.small-btn{
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: 'IBM Plex Mono', 'Noto Sans JP', sans-serif;
+}
+.small-btn.add{ background: var(--blue); color: #0a0a0a; }
+.small-btn.reset{ background: var(--panel-2); color: var(--amber); border: 1px solid var(--amber-dim); flex:1; }
+.small-btn.edit{ background: transparent; color: var(--blue); border: 1px solid rgba(79,163,255,0.4); flex:1; }
+.small-btn.hist{ background: transparent; color: var(--muted); border: 1px solid var(--line); flex:1; }
+.small-btn.del{ background: transparent; color: var(--danger); border: 1px solid rgba(255,93,93,0.35); flex:1; }
+
+/* ---- lista de histórico ---- */
+.hist-list{ max-height: 50vh; overflow-y:auto; margin: 4px 0 14px; }
+.hist-row{
+  display:flex; justify-content:space-between; align-items:center; gap:8px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+}
+.hist-row:last-child{ border-bottom:none; }
+.hist-info{ flex:1; min-width:0; }
+.hist-info .l1{ color: var(--text); font-weight:600; }
+.hist-info .l2{ color: var(--muted); font-size: 11px; margin-top:2px; }
+.hist-del{
+  flex: 0 0 auto;
+  background: transparent;
+  border: 1px solid rgba(255,93,93,0.35);
+  color: var(--danger);
+  border-radius: 6px;
+  padding: 6px 9px;
+  font-size: 15px;
+  cursor:pointer;
+}
+.hist-empty{ text-align:center; color: var(--muted); font-size: 12.5px; padding: 16px; }
+
+footer{ text-align:center; color: var(--line); font-size: 11px; margin-top: 20px; }
+.savenote{ text-align:center; color: var(--muted); font-size:11px; margin-top:4px; min-height:14px; }
+
+/* ---- área de relatório (impressão / PDF) ---- */
+#reportArea{ display:none; }
+
+/* abordagem por classe (mais confiável no Safari/iOS do que o truque de visibility) */
+body.printing{ padding: 0 !important; }
+body.printing > .wrap,
+body.printing .overlay{ display:none !important; }
+body.printing #reportArea{
+  display:block !important;
+  background:#fff; color:#000; padding: 10px;
+  width: 100%;
+  max-width: 100%;
+}
+.report-toolbar{
+  display:flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  padding: 6px 0;
+  z-index: 5;
+}
+.report-toolbar button{
+  flex:1;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  font-family: 'IBM Plex Mono', 'Noto Sans JP', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#reportPrintBtn{ background: #ffb100; color: #1a1a1a; }
+#reportCloseBtn{ background: #e8e8e8; color: #333; }
+#reportArea table{
+  width:100%;
+  max-width:100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 9.5px;
+}
+#reportArea th, #reportArea td{
+  border: 1px solid #999;
+  padding: 4px 5px;
+  text-align:left;
+  color:#000;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+#reportArea th{ background: #eee; font-size: 9px; }
+#reportArea h2{ font-family: Arial, sans-serif; margin: 0 0 4px; font-size: 16px; color:#000; }
+#reportArea .meta{ font-family: Arial, sans-serif; font-size: 10px; color:#333; margin-bottom: 10px; }
+
+/* ==========================================================
+   RESPONSIVO — tablets e telas maiores
+   O mesmo arquivo se adapta: celular (coluna única) até
+   tablet/desktop (cards lado a lado, formulários mais largos).
+   ========================================================== */
+@media (min-width: 700px){
+  body{ padding: 24px 28px 60px; }
+  .wrap{ max-width: 760px; }
+  h1{ font-size: 18px; }
+  .add-btn{ font-size: 15px; padding: 16px; }
+}
+
+@media (min-width: 980px){
+  .wrap{ max-width: 980px; }
+
+  /* ações utilitárias ficam mais compactas, alinhadas à esquerda */
+  .util-bar{ grid-template-columns: repeat(3, minmax(140px, 220px)); justify-content:flex-start; }
+
+  /* lista de ferramentas em grade de 2 colunas */
+  #toolList{
+    display:grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    align-items: start;
+  }
+  .tool-card{ margin-bottom: 0; }
+
+  /* modais centralizados como uma caixa, não mais "sheet" saindo de baixo */
+  .overlay{ align-items:center; padding: 20px; }
+  .modal{
+    border-radius: 14px;
+    max-width: 520px;
+    max-height: 88vh;
+    overflow-y: auto;
+    animation: none;
+  }
+}
+
+@media (min-width: 1300px){
+  .wrap{ max-width: 1240px; }
+  #toolList{ grid-template-columns: repeat(3, 1fr); }
+}
+
+/* larguras fixas por coluna, somando 100%, pra nunca ultrapassar a página */
+#reportArea th:nth-child(1), #reportArea td:nth-child(1){ width: 14%; } /* peça */
+#reportArea th:nth-child(2), #reportArea td:nth-child(2){ width: 16%; } /* ferramenta */
+#reportArea th:nth-child(3), #reportArea td:nth-child(3){ width: 12%; } /* data */
+#reportArea th:nth-child(4), #reportArea td:nth-child(4){ width: 14%; } /* motivo */
+#reportArea th:nth-child(5), #reportArea td:nth-child(5){ width: 12%; } /* quantidade */
+#reportArea th:nth-child(6), #reportArea td:nth-child(6){ width: 10%; } /* unidade */
+#reportArea th:nth-child(7), #reportArea td:nth-child(7){ width: 22%; } /* observação */
+
+@media print{
+  @page{ size: auto; margin: 8mm; }
+  body.printing > .wrap,
+  body.printing .overlay{ display:none !important; }
+  body.printing #reportArea{ display:block !important; }
+  .no-print{ display:none !important; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="badge">⚙</div>
+    <div class="htext">
+      <h1 data-i18n="title">Controle de Ferramentas</h1>
+      <p data-i18n="subtitle">Tempo de uso e desgaste</p>
+    </div>
+    <div class="langswitch">
+      <button id="btn-pt" class="active">PT</button>
+      <button id="btn-ja">日本語</button>
+    </div>
+  </header>
+
+  <div class="util-bar">
+    <button class="util-btn" id="btnBackup" data-i18n="backupBtn">⬇ Backup</button>
+    <button class="util-btn" id="btnRestore" data-i18n="restoreBtn">⬆ Restaurar</button>
+    <button class="util-btn report" id="btnReport" data-i18n="reportBtn">📄 Relatório PDF</button>
+    <input type="file" id="restoreFile" accept="application/json">
+  </div>
+
+  <button class="add-btn" id="toggleForm" data-i18n="addToolBtn">+ Nova ferramenta</button>
+
+  <div class="form-card" id="formCard">
+    <p class="card-title" data-i18n="formTitle">Cadastrar ferramenta</p>
+    <div class="field">
+      <label data-i18n="fieldName">Nome / código da ferramenta</label>
+      <input type="text" id="f-name" placeholder="Ex: Broca ⌀6 60°">
+    </div>
+    <div class="field">
+      <label data-i18n="fieldPartModel">Modelo da peça</label>
+      <input type="text" id="f-partmodel" placeholder="Ex: Eixo XT-450" list="partmodel-list">
+      <datalist id="partmodel-list"></datalist>
+    </div>
+    <div class="formrow">
+      <div class="field">
+        <label data-i18n="fieldUnit">Unidade</label>
+        <select id="f-unit">
+          <option value="horas" data-i18n-opt="unitHours">Horas</option>
+          <option value="pecas" data-i18n-opt="unitPieces">Peças</option>
+          <option value="ciclos" data-i18n-opt="unitCycles">Ciclos</option>
+        </select>
+      </div>
+      <div class="field">
+        <label data-i18n="fieldMaxLife">Vida útil máxima</label>
+        <input type="number" id="f-maxlife" step="0.1" placeholder="Ex: 40">
+      </div>
+    </div>
+    <div class="field">
+      <label data-i18n="fieldAlert">Avisar em (%)</label>
+      <input type="number" id="f-alert" value="80" step="1" min="1" max="99">
+    </div>
+
+    <div class="accessory-section">
+      <p class="accessory-title" data-i18n="accessoriesTitle">Acessórios (opcional)</p>
+      <div class="field">
+        <label data-i18n="fieldHolder">Número do Holder (ホルダー)</label>
+        <input type="text" id="f-holder" placeholder="Ex: BT30-H12">
+      </div>
+      <label class="checkrow">
+        <input type="checkbox" id="f-collet-enabled">
+        <span data-i18n="fieldColletEnable">Este conjunto usa Colete (コレット) com troca periódica</span>
+      </label>
+      <div class="formrow collet-fields" id="f-collet-fields" style="display:none;">
+        <div class="field">
+          <label data-i18n="fieldColletInterval">Intervalo de troca (dias)</label>
+          <input type="number" id="f-collet-interval" step="1" min="1" placeholder="Ex: 90">
+        </div>
+        <div class="field">
+          <label data-i18n="fieldColletLast">Data da última troca</label>
+          <input type="date" id="f-collet-last">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn ghost" id="cancelForm" data-i18n="btnCancel">Cancelar</button>
+      <button class="btn primary" id="saveForm" data-i18n="btnSave">Salvar</button>
+    </div>
+  </div>
+
+  <div class="filter-bar" id="filterBar" style="display:none;">
+    <label data-i18n="filterLabel">Filtrar por peça</label>
+    <select id="filterPart">
+      <option value="" data-i18n-opt="allParts">Todas as peças</option>
+    </select>
+  </div>
+
+  <div id="toolList"></div>
+
+  <div class="savenote" id="saveNote"></div>
+  <footer data-i18n="footer">dados salvos automaticamente neste aparelho, offline</footer>
+</div>
+
+<!-- modal: motivo da troca -->
+<div class="overlay" id="resetOverlay">
+  <div class="modal">
+    <p class="card-title" data-i18n="modalResetTitle">Registrar troca de ferramenta</p>
+    <p class="modal-sub" id="resetModalSub">—</p>
+    <div class="field">
+      <label data-i18n="fieldReason">Motivo da troca</label>
+      <select id="r-reason">
+        <option value="wear" data-i18n-opt="reasonWear">Desgaste normal</option>
+        <option value="break" data-i18n-opt="reasonBreak">Quebra</option>
+        <option value="defect" data-i18n-opt="reasonDefect">Defeito de fabricação</option>
+        <option value="other" data-i18n-opt="reasonOther">Outro</option>
+      </select>
+    </div>
+    <div class="field">
+      <label data-i18n="fieldNote">Observação (opcional)</label>
+      <textarea id="r-note" placeholder=""></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn ghost" id="cancelReset" data-i18n="btnCancel">Cancelar</button>
+      <button class="btn primary" id="confirmReset" data-i18n="btnConfirmReset">Confirmar troca</button>
+    </div>
+  </div>
+</div>
+
+<!-- modal: editar ferramenta -->
+<div class="overlay" id="editOverlay">
+  <div class="modal">
+    <p class="card-title" data-i18n="modalEditTitle">Editar ferramenta</p>
+    <p class="modal-sub" data-i18n="modalEditSub">Corrija dados cadastrados incorretamente.</p>
+    <div class="field">
+      <label data-i18n="fieldName">Nome / código da ferramenta</label>
+      <input type="text" id="e-name">
+    </div>
+    <div class="field">
+      <label data-i18n="fieldPartModel">Modelo da peça</label>
+      <input type="text" id="e-partmodel" list="partmodel-list">
+    </div>
+    <div class="formrow">
+      <div class="field">
+        <label data-i18n="fieldUnit">Unidade</label>
+        <select id="e-unit">
+          <option value="horas" data-i18n-opt="unitHours">Horas</option>
+          <option value="pecas" data-i18n-opt="unitPieces">Peças</option>
+          <option value="ciclos" data-i18n-opt="unitCycles">Ciclos</option>
+        </select>
+      </div>
+      <div class="field">
+        <label data-i18n="fieldMaxLife">Vida útil máxima</label>
+        <input type="number" id="e-maxlife" step="0.1">
+      </div>
+    </div>
+    <div class="formrow">
+      <div class="field">
+        <label data-i18n="fieldAlert">Avisar em (%)</label>
+        <input type="number" id="e-alert" step="1" min="1" max="99">
+      </div>
+      <div class="field">
+        <label data-i18n="fieldUsed">Valor acumulado atual</label>
+        <input type="number" id="e-used" step="0.1">
+      </div>
+    </div>
+
+    <div class="accessory-section">
+      <p class="accessory-title" data-i18n="accessoriesTitle">Acessórios (opcional)</p>
+      <div class="field">
+        <label data-i18n="fieldHolder">Número do Holder (ホルダー)</label>
+        <input type="text" id="e-holder" placeholder="Ex: BT30-H12">
+      </div>
+      <label class="checkrow">
+        <input type="checkbox" id="e-collet-enabled">
+        <span data-i18n="fieldColletEnable">Este conjunto usa Colete (コレット) com troca periódica</span>
+      </label>
+      <div class="formrow collet-fields" id="e-collet-fields" style="display:none;">
+        <div class="field">
+          <label data-i18n="fieldColletInterval">Intervalo de troca (dias)</label>
+          <input type="number" id="e-collet-interval" step="1" min="1">
+        </div>
+        <div class="field">
+          <label data-i18n="fieldColletLast">Data da última troca</label>
+          <input type="date" id="e-collet-last">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn ghost" id="cancelEdit" data-i18n="btnCancel">Cancelar</button>
+      <button class="btn primary" id="confirmEdit" data-i18n="btnSave">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- modal: histórico / corrigir lançamentos -->
+<div class="overlay" id="histOverlay">
+  <div class="modal">
+    <p class="card-title" data-i18n="modalHistTitle">Histórico de lançamentos</p>
+    <p class="modal-sub" id="histModalSub">—</p>
+    <div class="hist-list" id="histList"></div>
+    <div class="form-actions">
+      <button class="btn primary" id="closeHist" data-i18n="btnClose">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- área usada só na impressão / geração do PDF -->
+<div id="reportArea">
+  <div class="report-toolbar no-print">
+    <button id="reportPrintBtn" data-i18n="reportPrintBtn">🖨 Imprimir / Salvar PDF</button>
+    <button id="reportCloseBtn" data-i18n="reportCloseBtn">✕ Fechar</button>
+  </div>
+  <h2 id="reportTitle">Relatório de Trocas de Ferramentas</h2>
+  <div class="meta" id="reportMeta"></div>
+  <table>
+    <thead>
+      <tr id="reportHeadRow"></tr>
+    </thead>
+    <tbody id="reportBody"></tbody>
+  </table>
+</div>
+
+<script>
+const I18N = {
+  pt: {
+    title: "Controle de Ferramentas",
+    subtitle: "Tempo de uso e desgaste",
+    addToolBtn: "+ Nova ferramenta",
+    formTitle: "Cadastrar ferramenta",
+    fieldName: "Nome / código da ferramenta",
+    fieldPartModel: "Modelo da peça",
+    fieldUnit: "Unidade",
+    fieldMaxLife: "Vida útil máxima",
+    fieldAlert: "Avisar em (%)",
+    unitHours: "Horas", unitPieces: "Peças", unitCycles: "Ciclos",
+    btnCancel: "Cancelar", btnSave: "Salvar",
+    footer: "dados salvos automaticamente neste aparelho, offline",
+    empty: "Nenhuma ferramenta cadastrada ainda.\nToque em \"+ Nova ferramenta\" para começar.",
+    filterLabel: "Filtrar por peça",
+    allParts: "Todas as peças",
+    emptyFiltered: "Nenhuma ferramenta cadastrada para esta peça.",
+    statusOk: "OK", statusWarn: "Atenção", statusDanger: "Trocar agora",
+    used: "usado", of: "de",
+    addPlaceholder: "qtd.",
+    btnAdd: "+ Registrar",
+    btnReset: "Trocar",
+    btnEdit: "Editar",
+    btnHistory: "Histórico",
+    btnDelete: "Excluir ferramenta",
+    btnClose: "Fechar",
+    fieldUsed: "Valor acumulado atual",
+    modalEditTitle: "Editar ferramenta",
+    modalEditSub: "Corrija dados cadastrados incorretamente.",
+    modalHistTitle: "Histórico de lançamentos",
+    histModalSub: (name) => `${name} — toque no 🗑 para apagar um lançamento errado`,
+    histAdd: (amount, unit) => `+ ${amount} ${unit}`,
+    histReset: (reason) => `Troca — ${reason}`,
+    histEmpty: "Nenhum lançamento ainda.",
+    confirmDelHistAdd: "Apagar este registro? O valor será subtraído do total acumulado.",
+    confirmDelHistReset: "Apagar este registro de troca? Ele só será removido do histórico/relatório — o contador atual não muda.",
+    accessoriesTitle: "Acessórios (opcional)",
+    fieldHolder: "Número do Holder (ホルダー)",
+    fieldColletEnable: "Este conjunto usa Colete (コレット) com troca periódica",
+    fieldColletInterval: "Intervalo de troca (dias)",
+    fieldColletLast: "Data da última troca",
+    holderLabel: "Holder",
+    colletLabel: "Colete",
+    colletNextDue: "próxima troca",
+    colletOverdue: "atrasado",
+    colletDaysLeft: (n) => n === 1 ? "1 dia" : `${n} dias`,
+    colletDaysOver: (n) => n === 1 ? "1 dia atrasado" : `${n} dias atrasado`,
+    btnColletChange: "Trocar colete",
+    confirmColletChange: "Confirmar troca do colete hoje?",
+    colletNever: "nunca trocado",
+    histCollet: "Troca de colete (periódica)",
+    colQtyOrDays: "Ciclo / Quantidade / Dias",
+    lastChange: "Última troca",
+    never: "nunca",
+    confirmDelete: "Excluir esta ferramenta e todo o histórico?",
+    savedMsg: "salvo",
+    unitLabel: { horas: "h", pecas: "pçs", ciclos: "ciclos" },
+    fillRequired: "Preencha nome, modelo da peça e vida útil máxima.",
+    backupBtn: "⬇ Backup",
+    restoreBtn: "⬆ Restaurar",
+    reportBtn: "📄 Relatório PDF",
+    reportPrintBtn: "🖨 Imprimir / Salvar PDF",
+    reportCloseBtn: "✕ Fechar",
+    modalResetTitle: "Registrar troca de ferramenta",
+    fieldReason: "Motivo da troca",
+    fieldNote: "Observação (opcional)",
+    reasonWear: "Desgaste normal",
+    reasonBreak: "Quebra",
+    reasonDefect: "Defeito de fabricação",
+    reasonOther: "Outro",
+    btnConfirmReset: "Confirmar troca",
+    resetModalSub: (name, used, unit) => `${name} — usado até agora: ${used} ${unit}`,
+    restoreConfirm: "Isso vai SUBSTITUIR os dados atuais deste aparelho pelo backup selecionado. Continuar?",
+    restoreSuccess: "Backup restaurado com sucesso.",
+    restoreError: "Arquivo inválido. Selecione um backup exportado por este app.",
+    reportTitle: "Relatório de Trocas de Ferramentas",
+    reportGenerated: "Gerado em",
+    reportEmpty: "Nenhuma troca registrada ainda.",
+    colPart: "Modelo da Peça",
+    colTool: "Ferramenta",
+    colDate: "Data da Troca",
+    colReason: "Motivo",
+    colQty: "Ciclo / Quantidade na Troca",
+    colUnit: "Unidade",
+    colNote: "Observação",
+  },
+  ja: {
+    title: "工具管理",
+    subtitle: "使用時間と摩耗管理",
+    addToolBtn: "+ 新しい工具",
+    formTitle: "工具を登録",
+    fieldName: "工具名 / コード",
+    fieldPartModel: "加工する製品モデル",
+    fieldUnit: "単位",
+    fieldMaxLife: "最大寿命",
+    fieldAlert: "警告する割合 (%)",
+    unitHours: "時間", unitPieces: "個数", unitCycles: "サイクル",
+    btnCancel: "キャンセル", btnSave: "保存",
+    footer: "データはこの端末にオフラインで自動保存されます",
+    empty: "登録された工具はまだありません。\n「+ 新しい工具」をタップして開始してください。",
+    filterLabel: "製品モデルで絞り込み",
+    allParts: "すべての製品",
+    emptyFiltered: "この製品モデル用の工具はまだ登録されていません。",
+    statusOk: "OK", statusWarn: "注意", statusDanger: "今すぐ交換",
+    used: "使用済み", of: "/",
+    addPlaceholder: "数量",
+    btnAdd: "+ 記録",
+    btnReset: "交換",
+    btnEdit: "編集",
+    btnHistory: "履歴",
+    btnDelete: "工具を削除",
+    btnClose: "閉じる",
+    fieldUsed: "現在の累積使用量",
+    modalEditTitle: "工具を編集",
+    modalEditSub: "誤って登録した情報を修正します。",
+    modalHistTitle: "記録履歴",
+    histModalSub: (name) => `${name} — 🗑をタップして誤った記録を削除`,
+    histAdd: (amount, unit) => `+ ${amount} ${unit}`,
+    histReset: (reason) => `交換 — ${reason}`,
+    histEmpty: "まだ記録がありません。",
+    confirmDelHistAdd: "この記録を削除しますか?累積値から差し引かれます。",
+    confirmDelHistReset: "この交換記録を削除しますか?履歴/レポートから削除されるだけで、現在のカウンターは変わりません。",
+    accessoriesTitle: "アクセサリー(任意)",
+    fieldHolder: "ホルダー番号",
+    fieldColletEnable: "この工具はコレットの定期交換を使用する",
+    fieldColletInterval: "交換周期(日数)",
+    fieldColletLast: "前回交換日",
+    holderLabel: "ホルダー",
+    colletLabel: "コレット",
+    colletNextDue: "次回交換まで",
+    colletOverdue: "遅延",
+    colletDaysLeft: (n) => `残り${n}日`,
+    colletDaysOver: (n) => `${n}日遅延`,
+    btnColletChange: "コレット交換",
+    confirmColletChange: "本日コレットを交換したとして記録しますか?",
+    colletNever: "未交換",
+    histCollet: "コレット交換(定期)",
+    colQtyOrDays: "サイクル / 数量 / 日数",
+    lastChange: "前回交換",
+    never: "未交換",
+    confirmDelete: "この工具と履歴をすべて削除しますか?",
+    savedMsg: "保存済み",
+    unitLabel: { horas: "h", pecas: "個", ciclos: "サイクル" },
+    fillRequired: "名前・製品モデル・最大寿命を入力してください。",
+    backupBtn: "⬇ バックアップ",
+    restoreBtn: "⬆ 復元",
+    reportBtn: "📄 PDFレポート",
+    reportPrintBtn: "🖨 印刷 / PDF保存",
+    reportCloseBtn: "✕ 閉じる",
+    modalResetTitle: "工具交換を記録",
+    fieldReason: "交換理由",
+    fieldNote: "備考(任意)",
+    reasonWear: "通常摩耗",
+    reasonBreak: "破損",
+    reasonDefect: "製造不良",
+    reasonOther: "その他",
+    btnConfirmReset: "交換を確定",
+    resetModalSub: (name, used, unit) => `${name} — 現在までの使用量: ${used} ${unit}`,
+    restoreConfirm: "この端末の現在のデータをバックアップの内容で置き換えます。よろしいですか?",
+    restoreSuccess: "バックアップを復元しました。",
+    restoreError: "無効なファイルです。このアプリで作成したバックアップを選択してください。",
+    reportTitle: "工具交換レポート",
+    reportGenerated: "作成日時",
+    reportEmpty: "交換履歴はまだありません。",
+    colPart: "製品モデル",
+    colTool: "工具",
+    colDate: "交換日",
+    colReason: "理由",
+    colQty: "交換時の数量/サイクル",
+    colUnit: "単位",
+    colNote: "備考",
+  }
+};
+
+let currentLang = 'pt';
+let tools = [];
+const STORAGE_KEY = 'ferramentas_tools_v1';
+let pendingResetToolId = null;
+
+function t(){ return I18N[currentLang]; }
+
+/* ---------- storage: localStorage, 100% offline, por aparelho ---------- */
+function loadTools(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    tools = raw ? JSON.parse(raw) : [];
+  } catch(e){
+    tools = [];
+  }
+}
+
+function saveTools(){
+  const note = document.getElementById('saveNote');
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tools));
+    note.textContent = t().savedMsg + ' ✓';
+    setTimeout(()=>{ if(note.textContent.includes('✓')) note.textContent=''; }, 1500);
+  } catch(e){
+    note.textContent = 'erro ao salvar';
+  }
+}
+
+/* ---------- backup / restore ---------- */
+document.getElementById('btnBackup').addEventListener('click', () => {
+  const payload = {
+    app: 'controle-ferramentas',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    tools
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `backup-ferramentas-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('btnRestore').addEventListener('click', () => {
+  document.getElementById('restoreFile').click();
+});
+
+document.getElementById('restoreFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const data = JSON.parse(reader.result);
+      if(!data || !Array.isArray(data.tools)) throw new Error('invalid');
+      if(!confirm(t().restoreConfirm)) { e.target.value = ''; return; }
+      tools = data.tools;
+      saveTools();
+      render();
+      alert(t().restoreSuccess);
+    } catch(err){
+      alert(t().restoreError);
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+
+/* ---------- i18n ---------- */
+function applyLang(lang){
+  currentLang = lang;
+  const dict = I18N[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if(typeof dict[key] === 'string') el.textContent = dict[key];
+  });
+  document.querySelectorAll('[data-i18n-opt]').forEach(el => {
+    const key = el.getAttribute('data-i18n-opt');
+    if(typeof dict[key] === 'string') el.textContent = dict[key];
+  });
+  document.getElementById('btn-pt').classList.toggle('active', lang==='pt');
+  document.getElementById('btn-ja').classList.toggle('active', lang==='ja');
+  document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'ja';
+  render();
+}
+document.getElementById('btn-pt').addEventListener('click', () => applyLang('pt'));
+document.getElementById('btn-ja').addEventListener('click', () => applyLang('ja'));
+
+/* ---------- form toggle ---------- */
+const formCard = document.getElementById('formCard');
+document.getElementById('toggleForm').addEventListener('click', () => {
+  formCard.classList.add('open');
+  document.getElementById('f-name').focus();
+});
+document.getElementById('cancelForm').addEventListener('click', () => {
+  formCard.classList.remove('open');
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-partmodel').value = '';
+  document.getElementById('f-maxlife').value = '';
+  document.getElementById('f-alert').value = 80;
+  document.getElementById('f-holder').value = '';
+  document.getElementById('f-collet-enabled').checked = false;
+  document.getElementById('f-collet-interval').value = '';
+  document.getElementById('f-collet-last').value = '';
+  document.getElementById('f-collet-fields').style.display = 'none';
+});
+
+document.getElementById('f-collet-enabled').addEventListener('change', (e) => {
+  document.getElementById('f-collet-fields').style.display = e.target.checked ? 'grid' : 'none';
+});
+document.getElementById('e-collet-enabled').addEventListener('change', (e) => {
+  document.getElementById('e-collet-fields').style.display = e.target.checked ? 'grid' : 'none';
+});
+
+function todayISODate(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+document.getElementById('saveForm').addEventListener('click', () => {
+  const name = document.getElementById('f-name').value.trim();
+  const partmodel = document.getElementById('f-partmodel').value.trim();
+  const unit = document.getElementById('f-unit').value;
+  const maxlife = parseFloat(document.getElementById('f-maxlife').value);
+  const alertPct = parseFloat(document.getElementById('f-alert').value) || 80;
+  const holder = document.getElementById('f-holder').value.trim();
+  const colletEnabled = document.getElementById('f-collet-enabled').checked;
+  const colletInterval = parseFloat(document.getElementById('f-collet-interval').value);
+  const colletLast = document.getElementById('f-collet-last').value;
+
+  if(!name || !partmodel || isNaN(maxlife) || maxlife <= 0){
+    alert(t().fillRequired);
+    return;
+  }
+  if(colletEnabled && (isNaN(colletInterval) || colletInterval <= 0)){
+    alert(t().fillRequired);
+    return;
+  }
+
+  tools.push({
+    id: 't' + Date.now(),
+    name, partmodel, unit, maxlife,
+    alertPct: Math.min(99, Math.max(1, alertPct)),
+    used: 0,
+    lastChange: null,
+    holder: holder || null,
+    collet: colletEnabled ? {
+      enabled: true,
+      intervalDays: colletInterval,
+      lastChange: colletLast ? new Date(colletLast + 'T00:00:00').toISOString() : new Date().toISOString()
+    } : { enabled: false, intervalDays: null, lastChange: null },
+    history: []
+  });
+
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-partmodel').value = '';
+  document.getElementById('f-maxlife').value = '';
+  document.getElementById('f-alert').value = 80;
+  document.getElementById('f-holder').value = '';
+  document.getElementById('f-collet-enabled').checked = false;
+  document.getElementById('f-collet-interval').value = '';
+  document.getElementById('f-collet-last').value = '';
+  document.getElementById('f-collet-fields').style.display = 'none';
+  formCard.classList.remove('open');
+
+  saveTools();
+  render();
+});
+
+/* ---------- modal: motivo da troca ---------- */
+const resetOverlay = document.getElementById('resetOverlay');
+document.getElementById('cancelReset').addEventListener('click', () => {
+  resetOverlay.classList.remove('open');
+  pendingResetToolId = null;
+});
+document.getElementById('confirmReset').addEventListener('click', () => {
+  if(!pendingResetToolId) return;
+  const tool = tools.find(x => x.id === pendingResetToolId);
+  if(!tool) return;
+  const reason = document.getElementById('r-reason').value;
+  const note = document.getElementById('r-note').value.trim();
+  const now = new Date().toISOString();
+
+  tool.history.push({
+    type: 'reset',
+    date: now,
+    amount: tool.used,
+    unit: tool.unit,
+    reason,
+    note
+  });
+  tool.used = 0;
+  tool.lastChange = now;
+
+  document.getElementById('r-note').value = '';
+  document.getElementById('r-reason').selectedIndex = 0;
+  resetOverlay.classList.remove('open');
+  pendingResetToolId = null;
+
+  saveTools();
+  render();
+});
+
+/* ---------- modal: editar ferramenta ---------- */
+const editOverlay = document.getElementById('editOverlay');
+let editingToolId = null;
+
+function openEditModal(toolId){
+  const tool = tools.find(x => x.id === toolId);
+  if(!tool) return;
+  editingToolId = toolId;
+  document.getElementById('e-name').value = tool.name;
+  document.getElementById('e-partmodel').value = tool.partmodel;
+  document.getElementById('e-unit').value = tool.unit;
+  document.getElementById('e-maxlife').value = tool.maxlife;
+  document.getElementById('e-alert').value = tool.alertPct;
+  document.getElementById('e-used').value = tool.used;
+  document.getElementById('e-holder').value = tool.holder || '';
+  const collet = tool.collet || { enabled:false };
+  document.getElementById('e-collet-enabled').checked = !!collet.enabled;
+  document.getElementById('e-collet-interval').value = collet.intervalDays || '';
+  document.getElementById('e-collet-last').value = collet.lastChange ? collet.lastChange.slice(0,10) : todayISODate();
+  document.getElementById('e-collet-fields').style.display = collet.enabled ? 'grid' : 'none';
+  editOverlay.classList.add('open');
+}
+
+document.getElementById('cancelEdit').addEventListener('click', () => {
+  editOverlay.classList.remove('open');
+  editingToolId = null;
+});
+
+document.getElementById('confirmEdit').addEventListener('click', () => {
+  if(!editingToolId) return;
+  const tool = tools.find(x => x.id === editingToolId);
+  if(!tool) return;
+
+  const name = document.getElementById('e-name').value.trim();
+  const partmodel = document.getElementById('e-partmodel').value.trim();
+  const unit = document.getElementById('e-unit').value;
+  const maxlife = parseFloat(document.getElementById('e-maxlife').value);
+  const alertPct = parseFloat(document.getElementById('e-alert').value) || 80;
+  const used = parseFloat(document.getElementById('e-used').value);
+  const holder = document.getElementById('e-holder').value.trim();
+  const colletEnabled = document.getElementById('e-collet-enabled').checked;
+  const colletInterval = parseFloat(document.getElementById('e-collet-interval').value);
+  const colletLast = document.getElementById('e-collet-last').value;
+
+  if(!name || !partmodel || isNaN(maxlife) || maxlife <= 0 || isNaN(used) || used < 0){
+    alert(t().fillRequired);
+    return;
+  }
+  if(colletEnabled && (isNaN(colletInterval) || colletInterval <= 0)){
+    alert(t().fillRequired);
+    return;
+  }
+
+  tool.name = name;
+  tool.partmodel = partmodel;
+  tool.unit = unit;
+  tool.maxlife = maxlife;
+  tool.alertPct = Math.min(99, Math.max(1, alertPct));
+  tool.used = used;
+  tool.holder = holder || null;
+  tool.collet = colletEnabled ? {
+    enabled: true,
+    intervalDays: colletInterval,
+    lastChange: colletLast ? new Date(colletLast + 'T00:00:00').toISOString() : (tool.collet && tool.collet.lastChange) || new Date().toISOString()
+  } : { enabled: false, intervalDays: null, lastChange: null };
+
+  editOverlay.classList.remove('open');
+  editingToolId = null;
+  saveTools();
+  render();
+});
+
+/* ---------- modal: histórico ---------- */
+const histOverlay = document.getElementById('histOverlay');
+let historyToolId = null;
+
+function openHistoryModal(toolId){
+  const tool = tools.find(x => x.id === toolId);
+  if(!tool) return;
+  historyToolId = toolId;
+  renderHistory();
+  histOverlay.classList.add('open');
+}
+
+function renderHistory(){
+  const dict = t();
+  const tool = tools.find(x => x.id === historyToolId);
+  const listEl = document.getElementById('histList');
+  if(!tool){ listEl.innerHTML = ''; return; }
+
+  document.getElementById('histModalSub').textContent = dict.histModalSub(tool.name);
+
+  const entries = [...(tool.history || [])]
+    .map((h, idx) => ({...h, idx}))
+    .sort((a,b) => new Date(b.date) - new Date(a.date));
+
+  if(entries.length === 0){
+    listEl.innerHTML = `<div class="hist-empty">${dict.histEmpty}</div>`;
+    return;
+  }
+
+  const unitLabel = dict.unitLabel[tool.unit] || tool.unit;
+
+  listEl.innerHTML = entries.map(h => {
+    const dateStr = new Date(h.date).toLocaleString(currentLang === 'pt' ? 'pt-BR' : 'ja-JP');
+    let line1, line2;
+    if(h.type === 'reset'){
+      line1 = dict.histReset(reasonLabel(h.reason, dict));
+      line2 = `${dateStr}${h.note ? ' · ' + escapeHtml(h.note) : ''} · ${fmtNum(h.amount)} ${dict.unitLabel[h.unit] || h.unit}`;
+    } else if(h.type === 'collet'){
+      line1 = dict.histCollet;
+      line2 = `${dateStr} · ${fmtNum(h.amount)} ${h.unit === 'dias' ? (currentLang==='pt' ? 'dias' : '日') : h.unit}`;
+    } else {
+      line1 = dict.histAdd(fmtNum(h.amount), unitLabel);
+      line2 = dateStr;
+    }
+    return `
+      <div class="hist-row">
+        <div class="hist-info">
+          <div class="l1">${escapeHtml(line1)}</div>
+          <div class="l2">${line2}</div>
+        </div>
+        <button class="hist-del" data-hist-del="${h.idx}">🗑</button>
+      </div>
+    `;
+  }).join('');
+
+  listEl.querySelectorAll('[data-hist-del]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-hist-del'), 10);
+      const entry = tool.history[idx];
+      if(!entry) return;
+      const dict2 = t();
+      const msg = entry.type === 'add' ? dict2.confirmDelHistAdd : dict2.confirmDelHistReset;
+      if(!confirm(msg)) return;
+
+      if(entry.type === 'add'){
+        tool.used = Math.max(0, tool.used - entry.amount);
+      }
+      tool.history.splice(idx, 1);
+      saveTools();
+      renderHistory();
+      render();
+    });
+  });
+}
+
+document.getElementById('closeHist').addEventListener('click', () => {
+  histOverlay.classList.remove('open');
+  historyToolId = null;
+});
+
+/* ---------- render ---------- */
+function fmtNum(n){
+  const r = Math.round(n*100)/100;
+  return (Number.isInteger(r) ? r.toString() : r.toFixed(2));
+}
+
+function statusOf(pct, alertPct){
+  if(pct >= 100) return 'danger';
+  if(pct >= alertPct) return 'warn';
+  return 'ok';
+}
+
+function accessoryBlockHtml(tool, dict){
+  const hasHolder = !!tool.holder;
+  const collet = colletStatus(tool);
+  if(!hasHolder && !collet) return '';
+
+  let html = '<div class="accessory-block">';
+  if(hasHolder){
+    html += `<div class="accessory-row"><span class="k">${dict.holderLabel}</span><span class="v">${escapeHtml(tool.holder)}</span></div>`;
+  }
+  if(collet){
+    html += `
+      <div class="collet-row">
+        <div class="collet-info">
+          <span class="k">${dict.colletLabel}</span>
+          <span class="collet-status ${collet.status}">${collet.text}</span>
+        </div>
+        <button class="small-btn collet" data-collet-btn="${tool.id}">${dict.btnColletChange}</button>
+      </div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+function colletStatus(tool){
+  const collet = tool.collet;
+  if(!collet || !collet.enabled) return null;
+  const dict = t();
+  if(!collet.lastChange){
+    return { status: 'danger', text: dict.colletNever };
+  }
+  const last = new Date(collet.lastChange);
+  const now = new Date();
+  const daysElapsed = Math.floor((now - last) / 86400000);
+  const daysLeft = collet.intervalDays - daysElapsed;
+  const pct = (daysElapsed / collet.intervalDays) * 100;
+  const status = statusOf(pct, 80);
+  const text = daysLeft >= 0 ? dict.colletDaysLeft(daysLeft) : dict.colletDaysOver(Math.abs(daysLeft));
+  return { status, text, daysLeft };
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str == null ? '' : str;
+  return d.innerHTML;
+}
+
+function render(){
+  const dict = t();
+  const listEl = document.getElementById('toolList');
+  const filterBar = document.getElementById('filterBar');
+  const filterSelect = document.getElementById('filterPart');
+  const datalist = document.getElementById('partmodel-list');
+  listEl.innerHTML = '';
+
+  const partModels = [...new Set(tools.map(x => x.partmodel).filter(Boolean))].sort();
+  const currentFilter = filterSelect.value;
+  filterSelect.innerHTML = `<option value="">${dict.allParts}</option>` +
+    partModels.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+  filterSelect.value = partModels.includes(currentFilter) ? currentFilter : '';
+  datalist.innerHTML = partModels.map(p => `<option value="${escapeHtml(p)}">`).join('');
+
+  filterBar.style.display = tools.length > 0 ? 'flex' : 'none';
+
+  if(tools.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.style.whiteSpace = 'pre-line';
+    empty.textContent = dict.empty;
+    listEl.appendChild(empty);
+    return;
+  }
+
+  const activeFilter = filterSelect.value;
+  const filtered = activeFilter ? tools.filter(x => x.partmodel === activeFilter) : tools;
+
+  if(filtered.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = dict.emptyFiltered;
+    listEl.appendChild(empty);
+    return;
+  }
+
+  const sorted = [...filtered].sort((a,b) => (b.used/b.maxlife) - (a.used/a.maxlife));
+
+  sorted.forEach(tool => {
+    const pct = Math.min(999, (tool.used / tool.maxlife) * 100);
+    const status = statusOf(pct, tool.alertPct);
+    const unitLabel = dict.unitLabel[tool.unit] || tool.unit;
+
+    const card = document.createElement('div');
+    card.className = 'tool-card';
+
+    const statusLabel = status === 'ok' ? dict.statusOk : (status === 'warn' ? dict.statusWarn : dict.statusDanger);
+    const lastChangeText = tool.lastChange
+      ? new Date(tool.lastChange).toLocaleDateString(currentLang === 'pt' ? 'pt-BR' : 'ja-JP')
+      : dict.never;
+
+    card.innerHTML = `
+      <div class="tool-top">
+        <div>
+          <div class="tool-name">${escapeHtml(tool.name)}</div>
+          <div class="tool-meta">${dict.lastChange}: ${lastChangeText}</div>
+          <div class="part-badge">${escapeHtml(tool.partmodel || '—')}</div>
+        </div>
+        <div class="status-pill ${status}">${statusLabel}</div>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill ${status}" style="width:${Math.min(100,pct)}%"></div>
+      </div>
+      <div class="bar-numbers">
+        <span><b>${fmtNum(tool.used)}</b> ${dict.of} <b>${fmtNum(tool.maxlife)}</b> ${unitLabel}</span>
+        <span>${fmtNum(pct)}%</span>
+      </div>
+      ${accessoryBlockHtml(tool, dict)}
+      <div class="tool-actions">
+        <div class="quickadd">
+          <input type="number" step="0.1" placeholder="${dict.addPlaceholder}" data-add-input="${tool.id}">
+        </div>
+        <button class="small-btn add" data-add-btn="${tool.id}">${dict.btnAdd}</button>
+        <button class="small-btn reset" data-reset-btn="${tool.id}">${dict.btnReset}</button>
+      </div>
+      <div class="tool-actions" style="margin-top:8px;">
+        <button class="small-btn edit" data-edit-btn="${tool.id}">${dict.btnEdit}</button>
+        <button class="small-btn hist" data-hist-btn="${tool.id}">${dict.btnHistory}</button>
+        <button class="small-btn del" data-del-btn="${tool.id}">${dict.btnDelete}</button>
+      </div>
+    `;
+    listEl.appendChild(card);
+  });
+
+  listEl.querySelectorAll('[data-add-btn]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-add-btn');
+      const input = listEl.querySelector(`[data-add-input="${id}"]`);
+      const val = parseFloat(input.value);
+      if(isNaN(val) || val <= 0) return;
+      const tool = tools.find(x => x.id === id);
+      tool.used += val;
+      tool.history.push({ type: 'add', date: new Date().toISOString(), amount: val, unit: tool.unit });
+      input.value = '';
+      saveTools();
+      render();
+    });
+  });
+
+  listEl.querySelectorAll('[data-add-input]').forEach(input => {
+    input.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){
+        const id = input.getAttribute('data-add-input');
+        listEl.querySelector(`[data-add-btn="${id}"]`).click();
+      }
+    });
+  });
+
+  listEl.querySelectorAll('[data-reset-btn]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-reset-btn');
+      const tool = tools.find(x => x.id === id);
+      if(!tool) return;
+      pendingResetToolId = id;
+      document.getElementById('resetModalSub').textContent =
+        dict.resetModalSub(tool.name, fmtNum(tool.used), dict.unitLabel[tool.unit] || tool.unit);
+      resetOverlay.classList.add('open');
+    });
+  });
+
+  listEl.querySelectorAll('[data-collet-btn]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-collet-btn');
+      const tool = tools.find(x => x.id === id);
+      if(!tool || !tool.collet || !tool.collet.enabled) return;
+      const dict2 = t();
+      if(!confirm(dict2.confirmColletChange)) return;
+      const now = new Date().toISOString();
+      tool.history.push({ type: 'collet', date: now, amount: tool.collet.intervalDays, unit: 'dias' });
+      tool.collet.lastChange = now;
+      saveTools();
+      render();
+    });
+  });
+
+  listEl.querySelectorAll('[data-edit-btn]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openEditModal(btn.getAttribute('data-edit-btn'));
+    });
+  });
+
+  listEl.querySelectorAll('[data-hist-btn]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openHistoryModal(btn.getAttribute('data-hist-btn'));
+    });
+  });
+
+  listEl.querySelectorAll('[data-del-btn]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-del-btn');
+      if(!confirm(dict.confirmDelete)) return;
+      tools = tools.filter(x => x.id !== id);
+      saveTools();
+      render();
+    });
+  });
+
+  document.getElementById('filterPart').onchange = render;
+}
+
+/* ---------- relatório / PDF (via impressão do navegador) ---------- */
+document.getElementById('btnReport').addEventListener('click', () => {
+  const dict = t();
+  const rows = [];
+  tools.forEach(tool => {
+    (tool.history || []).forEach(h => {
+      if(h.type === 'reset'){
+        rows.push({
+          part: tool.partmodel || '—',
+          tool: tool.name,
+          date: new Date(h.date),
+          reason: reasonLabel(h.reason, dict),
+          amount: fmtNum(h.amount),
+          unit: dict.unitLabel[h.unit] || h.unit || '',
+          note: h.note || ''
+        });
+      } else if(h.type === 'collet'){
+        rows.push({
+          part: tool.partmodel || '—',
+          tool: (tool.name || '') + ' — ' + dict.colletLabel + (tool.holder ? ' (' + dict.holderLabel + ' ' + tool.holder + ')' : ''),
+          date: new Date(h.date),
+          reason: dict.histCollet,
+          amount: fmtNum(h.amount),
+          unit: currentLang === 'pt' ? 'dias' : '日',
+          note: ''
+        });
+      }
+    });
+  });
+  rows.sort((a,b) => b.date - a.date);
+
+  document.getElementById('reportTitle').textContent = dict.reportTitle;
+  document.getElementById('reportMeta').textContent =
+    `${dict.reportGenerated}: ${new Date().toLocaleString(currentLang==='pt' ? 'pt-BR' : 'ja-JP')}`;
+
+  const headRow = document.getElementById('reportHeadRow');
+  headRow.innerHTML = ['colPart','colTool','colDate','colReason','colQty','colUnit','colNote']
+    .map(k => `<th>${dict[k]}</th>`).join('');
+
+  const body = document.getElementById('reportBody');
+  if(rows.length === 0){
+    body.innerHTML = `<tr><td colspan="7">${dict.reportEmpty}</td></tr>`;
+  } else {
+    body.innerHTML = rows.map(r => `
+      <tr>
+        <td>${escapeHtml(r.part)}</td>
+        <td>${escapeHtml(r.tool)}</td>
+        <td>${r.date.toLocaleDateString(currentLang==='pt' ? 'pt-BR' : 'ja-JP')}</td>
+        <td>${escapeHtml(r.reason)}</td>
+        <td>${escapeHtml(r.amount)}</td>
+        <td>${escapeHtml(r.unit)}</td>
+        <td>${escapeHtml(r.note)}</td>
+      </tr>
+    `).join('');
+  }
+
+  document.body.classList.add('printing');
+  window.scrollTo(0,0);
+});
+
+document.getElementById('reportPrintBtn').addEventListener('click', () => {
+  // chamado diretamente pelo toque do usuário — preserva o gesto exigido pelo Safari/iPadOS
+  window.print();
+});
+
+document.getElementById('reportCloseBtn').addEventListener('click', stopPrinting);
+
+function stopPrinting(){
+  document.body.classList.remove('printing');
+}
+window.addEventListener('afterprint', stopPrinting);
+// fallback: alguns navegadores móveis não disparam 'afterprint' de forma confiável
+if(window.matchMedia){
+  const mq = window.matchMedia('print');
+  mq.addEventListener && mq.addEventListener('change', (e) => { if(!e.matches) stopPrinting(); });
+}
+
+function reasonLabel(code, dict){
+  switch(code){
+    case 'wear': return dict.reasonWear;
+    case 'break': return dict.reasonBreak;
+    case 'defect': return dict.reasonDefect;
+    case 'other': return dict.reasonOther;
+    default: return code || '—';
+  }
+}
+
+/* ---------- init ---------- */
+loadTools();
+applyLang('pt');
+</script>
+
+</body>
+</html>
