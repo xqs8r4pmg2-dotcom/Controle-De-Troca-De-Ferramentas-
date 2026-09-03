@@ -180,6 +180,40 @@ header p{ margin: 2px 0 0; color: var(--muted); font-size: 10.5px; }
 .collet-status.warn{ background: rgba(255,177,0,0.15); color: var(--amber); border:1px solid rgba(255,177,0,0.4); }
 .collet-status.danger{ background: rgba(255,93,93,0.15); color: var(--danger); border:1px solid rgba(255,93,93,0.4); }
 .small-btn.collet{ background: transparent; color: var(--good); border: 1px solid rgba(90,209,138,0.4); flex:0 0 auto; }
+.small-btn.dateToggle{ background: transparent; color: var(--muted); border: 1px solid var(--line); flex:0 0 auto; padding: 8px 10px; }
+.small-btn.dateToggle.active{ color: var(--blue); border-color: rgba(79,163,255,0.4); }
+
+.quickadd-datetime{
+  display:flex; align-items:center; gap:8px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #0d0f11;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.quickadd-datetime.hidden{ display:none; }
+.quickadd-datetime label{ font-size: 11px; color: var(--muted); white-space:nowrap; }
+.quickadd-datetime input[type="datetime-local"]{
+  flex:1;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  outline:none;
+}
+
+.hist-editdate{
+  flex: 0 0 auto;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 6px 9px;
+  font-size: 13px;
+  cursor:pointer;
+  margin-right: 4px;
+}
 .form-actions{ display:flex; gap:10px; margin-top: 14px; }
 .btn{
   flex:1;
@@ -466,13 +500,14 @@ body.printing #reportArea{
 }
 
 /* larguras fixas por coluna, somando 100%, pra nunca ultrapassar a página */
-#reportArea th:nth-child(1), #reportArea td:nth-child(1){ width: 14%; } /* peça */
-#reportArea th:nth-child(2), #reportArea td:nth-child(2){ width: 16%; } /* ferramenta */
-#reportArea th:nth-child(3), #reportArea td:nth-child(3){ width: 12%; } /* data */
-#reportArea th:nth-child(4), #reportArea td:nth-child(4){ width: 14%; } /* motivo */
-#reportArea th:nth-child(5), #reportArea td:nth-child(5){ width: 12%; } /* quantidade */
-#reportArea th:nth-child(6), #reportArea td:nth-child(6){ width: 10%; } /* unidade */
-#reportArea th:nth-child(7), #reportArea td:nth-child(7){ width: 22%; } /* observação */
+#reportArea th:nth-child(1), #reportArea td:nth-child(1){ width: 13%; } /* peça */
+#reportArea th:nth-child(2), #reportArea td:nth-child(2){ width: 14%; } /* ferramenta */
+#reportArea th:nth-child(3), #reportArea td:nth-child(3){ width: 10%; } /* data */
+#reportArea th:nth-child(4), #reportArea td:nth-child(4){ width: 11%; } /* condição instalada */
+#reportArea th:nth-child(5), #reportArea td:nth-child(5){ width: 13%; } /* motivo */
+#reportArea th:nth-child(6), #reportArea td:nth-child(6){ width: 10%; } /* quantidade */
+#reportArea th:nth-child(7), #reportArea td:nth-child(7){ width: 9%; } /* unidade */
+#reportArea th:nth-child(8), #reportArea td:nth-child(8){ width: 20%; } /* observação */
 
 @media print{
   @page{ size: auto; margin: 8mm; }
@@ -502,7 +537,7 @@ body.printing #reportArea{
     <button class="util-btn" id="btnBackup" data-i18n="backupBtn">⬇ Backup</button>
     <button class="util-btn" id="btnRestore" data-i18n="restoreBtn">⬆ Restaurar</button>
     <button class="util-btn report" id="btnReport" data-i18n="reportBtn">📄 Relatório PDF</button>
-    <input type="file" id="restoreFile" accept="application/json">
+    <input type="file" id="restoreFile" accept=".json,application/json,text/plain,text/json">
   </div>
 
   <button class="add-btn" id="toggleForm" data-i18n="addToolBtn">+ Nova ferramenta</button>
@@ -584,13 +619,21 @@ body.printing #reportArea{
     <p class="card-title" data-i18n="modalResetTitle">Registrar troca de ferramenta</p>
     <p class="modal-sub" id="resetModalSub">—</p>
     <div class="field">
-      <label data-i18n="fieldReason">Motivo da troca</label>
-      <select id="r-reason">
-        <option value="wear" data-i18n-opt="reasonWear">Desgaste normal</option>
-        <option value="break" data-i18n-opt="reasonBreak">Quebra</option>
-        <option value="defect" data-i18n-opt="reasonDefect">Defeito de fabricação</option>
-        <option value="other" data-i18n-opt="reasonOther">Outro</option>
+      <label data-i18n="fieldDateTimeReset">Data e hora da troca</label>
+      <input type="datetime-local" id="r-datetime">
+    </div>
+    <div class="field">
+      <label data-i18n="fieldCondition">Condição da ferramenta instalada</label>
+      <select id="r-condition">
+        <option value="new" data-i18n-opt="conditionNew">Nova (新品)</option>
+        <option value="reground" data-i18n-opt="conditionReground">Reafiada (再研)</option>
+        <option value="reversed" data-i18n-opt="conditionReversed">Lado invertido (反対)</option>
       </select>
+    </div>
+    <div class="field">
+      <label data-i18n="fieldReason">Motivo da troca</label>
+      <input type="text" id="r-reason" list="reason-list" placeholder="">
+      <datalist id="reason-list"></datalist>
     </div>
     <div class="field">
       <label data-i18n="fieldNote">Observação (opcional)</label>
@@ -682,6 +725,21 @@ body.printing #reportArea{
   </div>
 </div>
 
+<!-- modal: editar data/hora de um lançamento -->
+<div class="overlay" id="editDateOverlay">
+  <div class="modal">
+    <p class="card-title" data-i18n="modalEditDateTitle">Corrigir data e hora</p>
+    <div class="field">
+      <label data-i18n="fieldDateTime">Data e hora</label>
+      <input type="datetime-local" id="ed-datetime">
+    </div>
+    <div class="form-actions">
+      <button class="btn ghost" id="cancelEditDate" data-i18n="btnCancel">Cancelar</button>
+      <button class="btn primary" id="confirmEditDate" data-i18n="btnSave">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- área usada só na impressão / geração do PDF -->
 <div id="reportArea">
   <div class="report-toolbar no-print">
@@ -764,13 +822,27 @@ const I18N = {
     reportPrintBtn: "🖨 Imprimir / Salvar PDF",
     reportCloseBtn: "✕ Fechar",
     modalResetTitle: "Registrar troca de ferramenta",
+    fieldDateTimeReset: "Data e hora da troca",
+    fieldDateTime: "Data e hora",
+    editDateTime: "Data/hora",
+    modalEditDateTitle: "Corrigir data e hora",
+    btnEditDate: "🕐",
+    fillRequiredDate: "Selecione uma data e hora válidas.",
+    fieldCondition: "Condição da ferramenta instalada",
+    conditionNew: "Nova (新品)",
+    conditionReground: "Reafiada (再研)",
+    conditionReversed: "Lado invertido (反対)",
+    conditionLabel: { new: "Nova (新品)", reground: "Reafiada (再研)", reversed: "Lado invertido (反対)" },
     fieldReason: "Motivo da troca",
+    reasonPlaceholder: "Ex: Desgaste normal, quebra, vibração...",
     fieldNote: "Observação (opcional)",
     reasonWear: "Desgaste normal",
     reasonBreak: "Quebra",
     reasonDefect: "Defeito de fabricação",
     reasonOther: "Outro",
+    reasonSuggestions: ["Desgaste normal", "Quebra", "Defeito de fabricação"],
     btnConfirmReset: "Confirmar troca",
+    fillRequiredReason: "Preencha o motivo da troca.",
     resetModalSub: (name, used, unit) => `${name} — usado até agora: ${used} ${unit}`,
     restoreConfirm: "Isso vai SUBSTITUIR os dados atuais deste aparelho pelo backup selecionado. Continuar?",
     restoreSuccess: "Backup restaurado com sucesso.",
@@ -781,6 +853,7 @@ const I18N = {
     colPart: "Modelo da Peça",
     colTool: "Ferramenta",
     colDate: "Data da Troca",
+    colCondition: "Condição Instalada",
     colReason: "Motivo",
     colQty: "Ciclo / Quantidade na Troca",
     colUnit: "Unidade",
@@ -850,13 +923,27 @@ const I18N = {
     reportPrintBtn: "🖨 印刷 / PDF保存",
     reportCloseBtn: "✕ 閉じる",
     modalResetTitle: "工具交換を記録",
+    fieldDateTimeReset: "交換日時",
+    fieldDateTime: "日時",
+    editDateTime: "日時",
+    modalEditDateTitle: "日時を修正",
+    btnEditDate: "🕐",
+    fillRequiredDate: "有効な日時を選択してください。",
+    fieldCondition: "取付工具の状態",
+    conditionNew: "新品",
+    conditionReground: "再研",
+    conditionReversed: "反対",
+    conditionLabel: { new: "新品", reground: "再研", reversed: "反対" },
     fieldReason: "交換理由",
+    reasonPlaceholder: "例:通常摩耗、破損、振動など",
     fieldNote: "備考(任意)",
     reasonWear: "通常摩耗",
     reasonBreak: "破損",
     reasonDefect: "製造不良",
     reasonOther: "その他",
+    reasonSuggestions: ["通常摩耗", "破損", "製造不良"],
     btnConfirmReset: "交換を確定",
+    fillRequiredReason: "交換理由を入力してください。",
     resetModalSub: (name, used, unit) => `${name} — 現在までの使用量: ${used} ${unit}`,
     restoreConfirm: "この端末の現在のデータをバックアップの内容で置き換えます。よろしいですか?",
     restoreSuccess: "バックアップを復元しました。",
@@ -867,6 +954,7 @@ const I18N = {
     colPart: "製品モデル",
     colTool: "工具",
     colDate: "交換日",
+    colCondition: "取付状態",
     colReason: "理由",
     colQty: "交換時の数量/サイクル",
     colUnit: "単位",
@@ -998,6 +1086,16 @@ function todayISODate(){
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
+// formato exigido por <input type="datetime-local">: "YYYY-MM-DDTHH:MM"
+function nowDatetimeLocalValue(){
+  return isoToDatetimeLocalValue(new Date().toISOString());
+}
+function isoToDatetimeLocalValue(iso){
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2,'0');
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
 document.getElementById('saveForm').addEventListener('click', () => {
   const name = document.getElementById('f-name').value.trim();
   const partmodel = document.getElementById('f-partmodel').value.trim();
@@ -1050,6 +1148,35 @@ document.getElementById('saveForm').addEventListener('click', () => {
 
 /* ---------- modal: motivo da troca ---------- */
 const resetOverlay = document.getElementById('resetOverlay');
+
+function collectReasonSuggestions(){
+  const dict = t();
+  const used = new Set();
+  tools.forEach(tool => (tool.history || []).forEach(h => {
+    if(h.type === 'reset' && h.reason) used.add(h.reason);
+  }));
+  // sugestões padrão primeiro, depois as que já foram digitadas no app
+  dict.reasonSuggestions.forEach(s => used.add(s));
+  return [...used];
+}
+
+function openResetModal(toolId){
+  const tool = tools.find(x => x.id === toolId);
+  if(!tool) return;
+  const dict = t();
+  pendingResetToolId = toolId;
+  document.getElementById('resetModalSub').textContent =
+    dict.resetModalSub(tool.name, fmtNum(tool.used), dict.unitLabel[tool.unit] || tool.unit);
+  document.getElementById('r-datetime').value = nowDatetimeLocalValue();
+  document.getElementById('r-condition').selectedIndex = 0;
+  document.getElementById('r-reason').value = '';
+  document.getElementById('r-reason').placeholder = dict.reasonPlaceholder;
+  document.getElementById('r-note').value = '';
+  const datalist = document.getElementById('reason-list');
+  datalist.innerHTML = collectReasonSuggestions().map(r => `<option value="${escapeHtml(r)}">`).join('');
+  resetOverlay.classList.add('open');
+}
+
 document.getElementById('cancelReset').addEventListener('click', () => {
   resetOverlay.classList.remove('open');
   pendingResetToolId = null;
@@ -1058,23 +1185,37 @@ document.getElementById('confirmReset').addEventListener('click', () => {
   if(!pendingResetToolId) return;
   const tool = tools.find(x => x.id === pendingResetToolId);
   if(!tool) return;
-  const reason = document.getElementById('r-reason').value;
+  const datetimeVal = document.getElementById('r-datetime').value;
+  const condition = document.getElementById('r-condition').value;
+  const reason = document.getElementById('r-reason').value.trim();
   const note = document.getElementById('r-note').value.trim();
-  const now = new Date().toISOString();
+
+  if(!reason){
+    alert(t().fillRequiredReason);
+    return;
+  }
+  if(!datetimeVal){
+    alert(t().fillRequiredDate);
+    return;
+  }
+
+  const chosenDate = new Date(datetimeVal).toISOString();
 
   tool.history.push({
     type: 'reset',
-    date: now,
+    date: chosenDate,
     amount: tool.used,
     unit: tool.unit,
+    condition,
     reason,
     note
   });
   tool.used = 0;
-  tool.lastChange = now;
+  tool.lastChange = chosenDate;
 
   document.getElementById('r-note').value = '';
-  document.getElementById('r-reason').selectedIndex = 0;
+  document.getElementById('r-reason').value = '';
+  document.getElementById('r-condition').selectedIndex = 0;
   resetOverlay.classList.remove('open');
   pendingResetToolId = null;
 
@@ -1189,7 +1330,8 @@ function renderHistory(){
     const dateStr = new Date(h.date).toLocaleString(currentLang === 'pt' ? 'pt-BR' : 'ja-JP');
     let line1, line2;
     if(h.type === 'reset'){
-      line1 = dict.histReset(reasonLabel(h.reason, dict));
+      const condTxt = h.condition ? conditionLabel(h.condition, dict) : null;
+      line1 = dict.histReset(reasonLabel(h.reason, dict)) + (condTxt ? ` · ${condTxt}` : '');
       line2 = `${dateStr}${h.note ? ' · ' + escapeHtml(h.note) : ''} · ${fmtNum(h.amount)} ${dict.unitLabel[h.unit] || h.unit}`;
     } else if(h.type === 'collet'){
       line1 = dict.histCollet;
@@ -1204,10 +1346,18 @@ function renderHistory(){
           <div class="l1">${escapeHtml(line1)}</div>
           <div class="l2">${line2}</div>
         </div>
+        <button class="hist-editdate" data-hist-editdate="${h.idx}">🕐</button>
         <button class="hist-del" data-hist-del="${h.idx}">🗑</button>
       </div>
     `;
   }).join('');
+
+  listEl.querySelectorAll('[data-hist-editdate]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-hist-editdate'), 10);
+      openEditDateModal(tool.id, idx);
+    });
+  });
 
   listEl.querySelectorAll('[data-hist-del]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1232,6 +1382,53 @@ function renderHistory(){
 document.getElementById('closeHist').addEventListener('click', () => {
   histOverlay.classList.remove('open');
   historyToolId = null;
+});
+
+/* ---------- modal: corrigir data/hora de um lançamento ---------- */
+const editDateOverlay = document.getElementById('editDateOverlay');
+let pendingEditDate = null; // { toolId, idx }
+
+function openEditDateModal(toolId, idx){
+  const tool = tools.find(x => x.id === toolId);
+  if(!tool) return;
+  const entry = tool.history[idx];
+  if(!entry) return;
+  pendingEditDate = { toolId, idx };
+  document.getElementById('ed-datetime').value = isoToDatetimeLocalValue(entry.date);
+  editDateOverlay.classList.add('open');
+}
+
+document.getElementById('cancelEditDate').addEventListener('click', () => {
+  editDateOverlay.classList.remove('open');
+  pendingEditDate = null;
+});
+
+document.getElementById('confirmEditDate').addEventListener('click', () => {
+  if(!pendingEditDate) return;
+  const { toolId, idx } = pendingEditDate;
+  const tool = tools.find(x => x.id === toolId);
+  if(!tool) return;
+  const entry = tool.history[idx];
+  if(!entry) return;
+
+  const val = document.getElementById('ed-datetime').value;
+  if(!val){
+    alert(t().fillRequiredDate);
+    return;
+  }
+
+  entry.date = new Date(val).toISOString();
+
+  // se for a troca (reset) mais recente, mantém "última troca" do card em sincronia
+  const latestReset = [...tool.history].filter(h => h.type === 'reset').sort((a,b) => new Date(b.date) - new Date(a.date))[0];
+  if(latestReset) tool.lastChange = latestReset.date;
+
+  editDateOverlay.classList.remove('open');
+  pendingEditDate = null;
+
+  saveTools();
+  renderHistory();
+  render();
 });
 
 /* ---------- render ---------- */
@@ -1365,8 +1562,13 @@ function render(){
         <div class="quickadd">
           <input type="number" step="0.1" placeholder="${dict.addPlaceholder}" data-add-input="${tool.id}">
         </div>
+        <button class="small-btn dateToggle" data-datetoggle-btn="${tool.id}" title="${dict.editDateTime}">🕐</button>
         <button class="small-btn add" data-add-btn="${tool.id}">${dict.btnAdd}</button>
         <button class="small-btn reset" data-reset-btn="${tool.id}">${dict.btnReset}</button>
+      </div>
+      <div class="quickadd-datetime hidden" data-datetime-row="${tool.id}">
+        <label>${dict.editDateTime}</label>
+        <input type="datetime-local" data-add-datetime="${tool.id}" value="${nowDatetimeLocalValue()}">
       </div>
       <div class="tool-actions" style="margin-top:8px;">
         <button class="small-btn edit" data-edit-btn="${tool.id}">${dict.btnEdit}</button>
@@ -1377,6 +1579,14 @@ function render(){
     listEl.appendChild(card);
   });
 
+  listEl.querySelectorAll('[data-datetoggle-btn]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-datetoggle-btn');
+      const row = listEl.querySelector(`[data-datetime-row="${id}"]`);
+      row.classList.toggle('hidden');
+    });
+  });
+
   listEl.querySelectorAll('[data-add-btn]').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.getAttribute('data-add-btn');
@@ -1384,8 +1594,12 @@ function render(){
       const val = parseFloat(input.value);
       if(isNaN(val) || val <= 0) return;
       const tool = tools.find(x => x.id === id);
+      const dtInput = listEl.querySelector(`[data-add-datetime="${id}"]`);
+      const dtRow = listEl.querySelector(`[data-datetime-row="${id}"]`);
+      const useCustomDate = dtRow && !dtRow.classList.contains('hidden') && dtInput.value;
+      const entryDate = useCustomDate ? new Date(dtInput.value).toISOString() : new Date().toISOString();
       tool.used += val;
-      tool.history.push({ type: 'add', date: new Date().toISOString(), amount: val, unit: tool.unit });
+      tool.history.push({ type: 'add', date: entryDate, amount: val, unit: tool.unit });
       input.value = '';
       saveTools();
       render();
@@ -1403,13 +1617,7 @@ function render(){
 
   listEl.querySelectorAll('[data-reset-btn]').forEach(btn => {
     btn.addEventListener('click', () => {
-      const id = btn.getAttribute('data-reset-btn');
-      const tool = tools.find(x => x.id === id);
-      if(!tool) return;
-      pendingResetToolId = id;
-      document.getElementById('resetModalSub').textContent =
-        dict.resetModalSub(tool.name, fmtNum(tool.used), dict.unitLabel[tool.unit] || tool.unit);
-      resetOverlay.classList.add('open');
+      openResetModal(btn.getAttribute('data-reset-btn'));
     });
   });
 
@@ -1464,6 +1672,7 @@ document.getElementById('btnReport').addEventListener('click', () => {
           part: tool.partmodel || '—',
           tool: tool.name,
           date: new Date(h.date),
+          condition: conditionLabel(h.condition, dict),
           reason: reasonLabel(h.reason, dict),
           amount: fmtNum(h.amount),
           unit: dict.unitLabel[h.unit] || h.unit || '',
@@ -1474,6 +1683,7 @@ document.getElementById('btnReport').addEventListener('click', () => {
           part: tool.partmodel || '—',
           tool: (tool.name || '') + ' — ' + dict.colletLabel + (tool.holder ? ' (' + dict.holderLabel + ' ' + tool.holder + ')' : ''),
           date: new Date(h.date),
+          condition: '—',
           reason: dict.histCollet,
           amount: fmtNum(h.amount),
           unit: currentLang === 'pt' ? 'dias' : '日',
@@ -1489,18 +1699,19 @@ document.getElementById('btnReport').addEventListener('click', () => {
     `${dict.reportGenerated}: ${new Date().toLocaleString(currentLang==='pt' ? 'pt-BR' : 'ja-JP')}`;
 
   const headRow = document.getElementById('reportHeadRow');
-  headRow.innerHTML = ['colPart','colTool','colDate','colReason','colQty','colUnit','colNote']
+  headRow.innerHTML = ['colPart','colTool','colDate','colCondition','colReason','colQty','colUnit','colNote']
     .map(k => `<th>${dict[k]}</th>`).join('');
 
   const body = document.getElementById('reportBody');
   if(rows.length === 0){
-    body.innerHTML = `<tr><td colspan="7">${dict.reportEmpty}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="8">${dict.reportEmpty}</td></tr>`;
   } else {
     body.innerHTML = rows.map(r => `
       <tr>
         <td>${escapeHtml(r.part)}</td>
         <td>${escapeHtml(r.tool)}</td>
         <td>${r.date.toLocaleDateString(currentLang==='pt' ? 'pt-BR' : 'ja-JP')}</td>
+        <td>${escapeHtml(r.condition)}</td>
         <td>${escapeHtml(r.reason)}</td>
         <td>${escapeHtml(r.amount)}</td>
         <td>${escapeHtml(r.unit)}</td>
@@ -1538,6 +1749,11 @@ function reasonLabel(code, dict){
     case 'other': return dict.reasonOther;
     default: return code || '—';
   }
+}
+
+function conditionLabel(code, dict){
+  if(!code) return '—';
+  return dict.conditionLabel[code] || code;
 }
 
 /* ---------- init ---------- */
