@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -192,16 +192,23 @@ header p{ margin: 2px 0 0; color: var(--muted); font-size: 10.5px; }
 }
 .accessory-row .k{ color: var(--muted); }
 .accessory-row .v{ color: var(--text); font-weight:600; }
+
+/* bloco do colete: rótulo/modelo em cima, status + botão embaixo (não quebra mais no meio) */
 .collet-row{
-  display:flex; justify-content:space-between; align-items:center; gap:8px;
-  margin-top: 4px;
+  display:flex; flex-direction: column; gap:6px;
+  margin-top: 6px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
 }
-.collet-info{ font-size: 12px; flex:1; min-width:0; }
-.collet-info .k{ color: var(--muted); }
-.collet-model{ color: var(--text); font-weight:600; margin-left:4px; }
+.collet-head{ display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; font-size: 12px; }
+.collet-head .k{ color: var(--muted); flex:0 0 auto; }
+.collet-model{ color: var(--text); font-weight:600; word-break: break-word; }
+.collet-foot{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .collet-status{
   font-size: 10px; font-weight:700; letter-spacing:0.3px; text-transform:uppercase;
-  padding: 2px 7px; border-radius: 5px; margin-left:6px;
+  padding: 3px 8px; border-radius: 5px; white-space:nowrap; flex:0 0 auto;
 }
 .collet-status.ok{ background: rgba(90,209,138,0.15); color: var(--good); border:1px solid rgba(90,209,138,0.4); }
 .collet-status.warn{ background: rgba(255,177,0,0.15); color: var(--amber); border:1px solid rgba(255,177,0,0.4); }
@@ -213,21 +220,23 @@ header p{ margin: 2px 0 0; color: var(--muted); font-size: 10.5px; }
 .quickadd-datetime{
   display:flex; align-items:center; gap:8px;
   margin-top: 8px;
-  padding: 8px 10px;
+  padding: 9px 11px;
   background: #0d0f11;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(79,163,255,0.35);
   border-radius: 8px;
 }
 .quickadd-datetime.hidden{ display:none; }
-.quickadd-datetime label{ font-size: 11px; color: var(--muted); white-space:nowrap; }
+.quickadd-datetime label{ font-size: 11px; color: var(--blue); white-space:nowrap; font-weight:600; }
 .quickadd-datetime input[type="datetime-local"]{
   flex:1;
+  min-width: 0;
   background: transparent;
   border: none;
   color: var(--text);
   font-family: 'IBM Plex Mono', monospace;
   font-size: 13px;
   outline:none;
+  text-align: right;
 }
 
 .hist-editdate{
@@ -1627,14 +1636,16 @@ function accessoryBlockHtml(tool, dict){
     html += `<div class="accessory-row"><span class="k">${dict.holderLabel}</span><span class="v">${escapeHtml(tool.holder)}</span></div>`;
   }
   if(collet){
-    const modelTxt = (tool.collet && tool.collet.model) ? ` <span class="collet-model">${escapeHtml(tool.collet.model)}</span>` : '';
+    const modelTxt = (tool.collet && tool.collet.model) ? `<span class="collet-model">${escapeHtml(tool.collet.model)}</span>` : '';
     html += `
       <div class="collet-row">
-        <div class="collet-info">
+        <div class="collet-head">
           <span class="k">${dict.colletLabel}</span>${modelTxt}
-          <span class="collet-status ${collet.status}">${collet.text}</span>
         </div>
-        <button class="small-btn collet" data-collet-btn="${tool.id}">${dict.btnColletChange}</button>
+        <div class="collet-foot">
+          <span class="collet-status ${collet.status}">${collet.text}</span>
+          <button class="small-btn collet" data-collet-btn="${tool.id}">${dict.btnColletChange}</button>
+        </div>
       </div>`;
   }
   html += '</div>';
@@ -1759,6 +1770,7 @@ function render(){
       const id = btn.getAttribute('data-datetoggle-btn');
       const row = listEl.querySelector(`[data-datetime-row="${id}"]`);
       row.classList.toggle('hidden');
+      btn.classList.toggle('active', !row.classList.contains('hidden'));
     });
   });
 
