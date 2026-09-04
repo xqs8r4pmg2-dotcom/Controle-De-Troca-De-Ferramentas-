@@ -154,6 +154,32 @@ header p{ margin: 2px 0 0; color: var(--muted); font-size: 10.5px; }
 }
 .checkrow input{ margin-top: 2px; flex:0 0 auto; width:auto; }
 
+/* ---- grade de seleção de Holder (H1..H10) ---- */
+.holder-grid{
+  display:grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.holder-cell{
+  background: #0d0f11;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 7px;
+  padding: 10px 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align:center;
+  user-select:none;
+}
+.holder-cell.selected{
+  background: rgba(79,163,255,0.15);
+  border-color: var(--blue);
+  color: var(--blue);
+}
+.holder-cell.selected::after{ content:" ✓"; font-size: 11px; }
+
 /* ---- bloco de acessórios no card ---- */
 .accessory-block{
   margin-top: 10px;
@@ -172,6 +198,7 @@ header p{ margin: 2px 0 0; color: var(--muted); font-size: 10.5px; }
 }
 .collet-info{ font-size: 12px; flex:1; min-width:0; }
 .collet-info .k{ color: var(--muted); }
+.collet-model{ color: var(--text); font-weight:600; margin-left:4px; }
 .collet-status{
   font-size: 10px; font-weight:700; letter-spacing:0.3px; text-transform:uppercase;
   padding: 2px 7px; border-radius: 5px; margin-left:6px;
@@ -575,21 +602,28 @@ body.printing #reportArea{
     <div class="accessory-section">
       <p class="accessory-title" data-i18n="accessoriesTitle">Acessórios (opcional)</p>
       <div class="field">
-        <label data-i18n="fieldHolder">Número do Holder (ホルダー)</label>
-        <input type="text" id="f-holder" placeholder="Ex: BT30-H12">
+        <label data-i18n="fieldHolder">Holder (ホルダー)</label>
+        <div class="holder-grid" id="f-holder-grid"></div>
       </div>
       <label class="checkrow">
         <input type="checkbox" id="f-collet-enabled">
         <span data-i18n="fieldColletEnable">Este conjunto usa Colete (コレット) com troca periódica</span>
       </label>
-      <div class="formrow collet-fields" id="f-collet-fields" style="display:none;">
+      <div class="collet-fields" id="f-collet-fields" style="display:none;">
         <div class="field">
-          <label data-i18n="fieldColletInterval">Intervalo de troca (dias)</label>
-          <input type="number" id="f-collet-interval" step="1" min="1" placeholder="Ex: 90">
+          <label data-i18n="fieldColletModel">Modelo do colete</label>
+          <input type="text" id="f-collet-model" list="colletmodel-list" placeholder="Ex: ER16-6.0">
+          <datalist id="colletmodel-list"></datalist>
         </div>
-        <div class="field">
-          <label data-i18n="fieldColletLast">Data da última troca</label>
-          <input type="date" id="f-collet-last">
+        <div class="formrow">
+          <div class="field">
+            <label data-i18n="fieldColletInterval">Intervalo de troca (dias)</label>
+            <input type="number" id="f-collet-interval" step="1" min="1" placeholder="Ex: 90">
+          </div>
+          <div class="field">
+            <label data-i18n="fieldColletLast">Data da última troca</label>
+            <input type="date" id="f-collet-last">
+          </div>
         </div>
       </div>
     </div>
@@ -627,7 +661,7 @@ body.printing #reportArea{
       <select id="r-condition">
         <option value="new" data-i18n-opt="conditionNew">Nova (新品)</option>
         <option value="reground" data-i18n-opt="conditionReground">Reafiada (再研)</option>
-        <option value="reversed" data-i18n-opt="conditionReversed">Lado invertido (反対)</option>
+        <option value="reversed" data-i18n-opt="conditionReversed">Lado invertido (反転)</option>
       </select>
     </div>
     <div class="field">
@@ -687,21 +721,27 @@ body.printing #reportArea{
     <div class="accessory-section">
       <p class="accessory-title" data-i18n="accessoriesTitle">Acessórios (opcional)</p>
       <div class="field">
-        <label data-i18n="fieldHolder">Número do Holder (ホルダー)</label>
-        <input type="text" id="e-holder" placeholder="Ex: BT30-H12">
+        <label data-i18n="fieldHolder">Holder (ホルダー)</label>
+        <div class="holder-grid" id="e-holder-grid"></div>
       </div>
       <label class="checkrow">
         <input type="checkbox" id="e-collet-enabled">
         <span data-i18n="fieldColletEnable">Este conjunto usa Colete (コレット) com troca periódica</span>
       </label>
-      <div class="formrow collet-fields" id="e-collet-fields" style="display:none;">
+      <div class="collet-fields" id="e-collet-fields" style="display:none;">
         <div class="field">
-          <label data-i18n="fieldColletInterval">Intervalo de troca (dias)</label>
-          <input type="number" id="e-collet-interval" step="1" min="1">
+          <label data-i18n="fieldColletModel">Modelo do colete</label>
+          <input type="text" id="e-collet-model" list="colletmodel-list">
         </div>
-        <div class="field">
-          <label data-i18n="fieldColletLast">Data da última troca</label>
-          <input type="date" id="e-collet-last">
+        <div class="formrow">
+          <div class="field">
+            <label data-i18n="fieldColletInterval">Intervalo de troca (dias)</label>
+            <input type="number" id="e-collet-interval" step="1" min="1">
+          </div>
+          <div class="field">
+            <label data-i18n="fieldColletLast">Data da última troca</label>
+            <input type="date" id="e-collet-last">
+          </div>
         </div>
       </div>
     </div>
@@ -740,7 +780,7 @@ body.printing #reportArea{
         <select id="ed-condition">
           <option value="new" data-i18n-opt="conditionNew">Nova (新品)</option>
           <option value="reground" data-i18n-opt="conditionReground">Reafiada (再研)</option>
-          <option value="reversed" data-i18n-opt="conditionReversed">Lado invertido (反対)</option>
+          <option value="reversed" data-i18n-opt="conditionReversed">Lado invertido (反転)</option>
         </select>
       </div>
       <div class="field">
@@ -820,7 +860,10 @@ const I18N = {
     confirmDelHistAdd: "Apagar este registro? O valor será subtraído do total acumulado.",
     confirmDelHistReset: "Apagar este registro de troca? Ele só será removido do histórico/relatório — o contador atual não muda.",
     accessoriesTitle: "Acessórios (opcional)",
-    fieldHolder: "Número do Holder (ホルダー)",
+    fieldHolder: "Holder (ホルダー) — toque para selecionar",
+    fieldColletModel: "Modelo do colete",
+    colletModelLabel: "Modelo",
+    holderNone: "Nenhum",
     fieldColletEnable: "Este conjunto usa Colete (コレット) com troca periódica",
     fieldColletInterval: "Intervalo de troca (dias)",
     fieldColletLast: "Data da última troca",
@@ -863,8 +906,8 @@ const I18N = {
     fieldCondition: "Condição da ferramenta instalada",
     conditionNew: "Nova (新品)",
     conditionReground: "Reafiada (再研)",
-    conditionReversed: "Lado invertido (反対)",
-    conditionLabel: { new: "Nova (新品)", reground: "Reafiada (再研)", reversed: "Lado invertido (反対)" },
+    conditionReversed: "Lado invertido (反転)",
+    conditionLabel: { new: "Nova (新品)", reground: "Reafiada (再研)", reversed: "Lado invertido (反転)" },
     fieldReason: "Motivo da troca",
     reasonPlaceholder: "Ex: Desgaste normal, quebra, vibração...",
     fieldNote: "Observação (opcional)",
@@ -928,7 +971,10 @@ const I18N = {
     confirmDelHistAdd: "この記録を削除しますか?累積値から差し引かれます。",
     confirmDelHistReset: "この交換記録を削除しますか?履歴/レポートから削除されるだけで、現在のカウンターは変わりません。",
     accessoriesTitle: "アクセサリー(任意)",
-    fieldHolder: "ホルダー番号",
+    fieldHolder: "ホルダー — タップして選択",
+    fieldColletModel: "コレット型番",
+    colletModelLabel: "型番",
+    holderNone: "なし",
     fieldColletEnable: "この工具はコレットの定期交換を使用する",
     fieldColletInterval: "交換周期(日数)",
     fieldColletLast: "前回交換日",
@@ -971,8 +1017,8 @@ const I18N = {
     fieldCondition: "取付工具の状態",
     conditionNew: "新品",
     conditionReground: "再研",
-    conditionReversed: "反対",
-    conditionLabel: { new: "新品", reground: "再研", reversed: "反対" },
+    conditionReversed: "反転",
+    conditionLabel: { new: "新品", reground: "再研", reversed: "反転" },
     fieldReason: "交換理由",
     reasonPlaceholder: "例:通常摩耗、破損、振動など",
     fieldNote: "備考(任意)",
@@ -1098,6 +1144,8 @@ document.getElementById('btn-ja').addEventListener('click', () => applyLang('ja'
 const formCard = document.getElementById('formCard');
 document.getElementById('toggleForm').addEventListener('click', () => {
   formCard.classList.add('open');
+  buildHolderGrid('f-holder-grid', null);
+  refreshColletModelSuggestions();
   document.getElementById('f-name').focus();
 });
 document.getElementById('cancelForm').addEventListener('click', () => {
@@ -1106,18 +1154,19 @@ document.getElementById('cancelForm').addEventListener('click', () => {
   document.getElementById('f-partmodel').value = '';
   document.getElementById('f-maxlife').value = '';
   document.getElementById('f-alert').value = 80;
-  document.getElementById('f-holder').value = '';
+  buildHolderGrid('f-holder-grid', null);
   document.getElementById('f-collet-enabled').checked = false;
+  document.getElementById('f-collet-model').value = '';
   document.getElementById('f-collet-interval').value = '';
   document.getElementById('f-collet-last').value = '';
   document.getElementById('f-collet-fields').style.display = 'none';
 });
 
 document.getElementById('f-collet-enabled').addEventListener('change', (e) => {
-  document.getElementById('f-collet-fields').style.display = e.target.checked ? 'grid' : 'none';
+  document.getElementById('f-collet-fields').style.display = e.target.checked ? 'block' : 'none';
 });
 document.getElementById('e-collet-enabled').addEventListener('change', (e) => {
-  document.getElementById('e-collet-fields').style.display = e.target.checked ? 'grid' : 'none';
+  document.getElementById('e-collet-fields').style.display = e.target.checked ? 'block' : 'none';
 });
 
 function todayISODate(){
@@ -1126,6 +1175,36 @@ function todayISODate(){
 }
 
 // formato exigido por <input type="datetime-local">: "YYYY-MM-DDTHH:MM"
+/* ---------- grade de seleção de Holder ---------- */
+const HOLDER_OPTIONS = ['H1','H2','H3','H4','H5','H6','H7','H8','H9','H10'];
+
+// monta a grade dentro de um container; selecionar de novo o mesmo item desmarca
+function buildHolderGrid(containerId, selectedValue){
+  const el = document.getElementById(containerId);
+  el.innerHTML = HOLDER_OPTIONS.map(h =>
+    `<div class="holder-cell${h === selectedValue ? ' selected' : ''}" data-holder="${h}">${h}</div>`
+  ).join('');
+  el.querySelectorAll('.holder-cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      const wasSelected = cell.classList.contains('selected');
+      el.querySelectorAll('.holder-cell').forEach(c => c.classList.remove('selected'));
+      if(!wasSelected) cell.classList.add('selected');
+    });
+  });
+}
+
+function getSelectedHolder(containerId){
+  const sel = document.getElementById(containerId).querySelector('.holder-cell.selected');
+  return sel ? sel.getAttribute('data-holder') : null;
+}
+
+// sugestões de modelo de colete a partir dos já cadastrados
+function refreshColletModelSuggestions(){
+  const models = [...new Set(tools.map(x => x.collet && x.collet.model).filter(Boolean))].sort();
+  const dl = document.getElementById('colletmodel-list');
+  if(dl) dl.innerHTML = models.map(m => `<option value="${escapeHtml(m)}">`).join('');
+}
+
 function nowDatetimeLocalValue(){
   return isoToDatetimeLocalValue(new Date().toISOString());
 }
@@ -1141,8 +1220,9 @@ document.getElementById('saveForm').addEventListener('click', () => {
   const unit = document.getElementById('f-unit').value;
   const maxlife = parseFloat(document.getElementById('f-maxlife').value);
   const alertPct = parseFloat(document.getElementById('f-alert').value) || 80;
-  const holder = document.getElementById('f-holder').value.trim();
+  const holder = getSelectedHolder('f-holder-grid');
   const colletEnabled = document.getElementById('f-collet-enabled').checked;
+  const colletModel = document.getElementById('f-collet-model').value.trim();
   const colletInterval = parseFloat(document.getElementById('f-collet-interval').value);
   const colletLast = document.getElementById('f-collet-last').value;
 
@@ -1164,9 +1244,10 @@ document.getElementById('saveForm').addEventListener('click', () => {
     holder: holder || null,
     collet: colletEnabled ? {
       enabled: true,
+      model: colletModel || null,
       intervalDays: colletInterval,
       lastChange: colletLast ? new Date(colletLast + 'T00:00:00').toISOString() : new Date().toISOString()
-    } : { enabled: false, intervalDays: null, lastChange: null },
+    } : { enabled: false, model: null, intervalDays: null, lastChange: null },
     history: []
   });
 
@@ -1174,8 +1255,9 @@ document.getElementById('saveForm').addEventListener('click', () => {
   document.getElementById('f-partmodel').value = '';
   document.getElementById('f-maxlife').value = '';
   document.getElementById('f-alert').value = 80;
-  document.getElementById('f-holder').value = '';
+  buildHolderGrid('f-holder-grid', null);
   document.getElementById('f-collet-enabled').checked = false;
+  document.getElementById('f-collet-model').value = '';
   document.getElementById('f-collet-interval').value = '';
   document.getElementById('f-collet-last').value = '';
   document.getElementById('f-collet-fields').style.display = 'none';
@@ -1276,12 +1358,14 @@ function openEditModal(toolId){
   document.getElementById('e-maxlife').value = tool.maxlife;
   document.getElementById('e-alert').value = tool.alertPct;
   document.getElementById('e-used').value = tool.used;
-  document.getElementById('e-holder').value = tool.holder || '';
+  buildHolderGrid('e-holder-grid', tool.holder || null);
   const collet = tool.collet || { enabled:false };
   document.getElementById('e-collet-enabled').checked = !!collet.enabled;
+  document.getElementById('e-collet-model').value = collet.model || '';
   document.getElementById('e-collet-interval').value = collet.intervalDays || '';
   document.getElementById('e-collet-last').value = collet.lastChange ? collet.lastChange.slice(0,10) : todayISODate();
-  document.getElementById('e-collet-fields').style.display = collet.enabled ? 'grid' : 'none';
+  document.getElementById('e-collet-fields').style.display = collet.enabled ? 'block' : 'none';
+  refreshColletModelSuggestions();
   editOverlay.classList.add('open');
 }
 
@@ -1301,8 +1385,9 @@ document.getElementById('confirmEdit').addEventListener('click', () => {
   const maxlife = parseFloat(document.getElementById('e-maxlife').value);
   const alertPct = parseFloat(document.getElementById('e-alert').value) || 80;
   const used = parseFloat(document.getElementById('e-used').value);
-  const holder = document.getElementById('e-holder').value.trim();
+  const holder = getSelectedHolder('e-holder-grid');
   const colletEnabled = document.getElementById('e-collet-enabled').checked;
+  const colletModel = document.getElementById('e-collet-model').value.trim();
   const colletInterval = parseFloat(document.getElementById('e-collet-interval').value);
   const colletLast = document.getElementById('e-collet-last').value;
 
@@ -1324,9 +1409,10 @@ document.getElementById('confirmEdit').addEventListener('click', () => {
   tool.holder = holder || null;
   tool.collet = colletEnabled ? {
     enabled: true,
+    model: colletModel || null,
     intervalDays: colletInterval,
     lastChange: colletLast ? new Date(colletLast + 'T00:00:00').toISOString() : (tool.collet && tool.collet.lastChange) || new Date().toISOString()
-  } : { enabled: false, intervalDays: null, lastChange: null };
+  } : { enabled: false, model: null, intervalDays: null, lastChange: null };
 
   editOverlay.classList.remove('open');
   editingToolId = null;
@@ -1541,10 +1627,11 @@ function accessoryBlockHtml(tool, dict){
     html += `<div class="accessory-row"><span class="k">${dict.holderLabel}</span><span class="v">${escapeHtml(tool.holder)}</span></div>`;
   }
   if(collet){
+    const modelTxt = (tool.collet && tool.collet.model) ? ` <span class="collet-model">${escapeHtml(tool.collet.model)}</span>` : '';
     html += `
       <div class="collet-row">
         <div class="collet-info">
-          <span class="k">${dict.colletLabel}</span>
+          <span class="k">${dict.colletLabel}</span>${modelTxt}
           <span class="collet-status ${collet.status}">${collet.text}</span>
         </div>
         <button class="small-btn collet" data-collet-btn="${tool.id}">${dict.btnColletChange}</button>
@@ -1769,7 +1856,7 @@ document.getElementById('btnReport').addEventListener('click', () => {
       } else if(h.type === 'collet'){
         rows.push({
           part: tool.partmodel || '—',
-          tool: (tool.name || '') + ' — ' + dict.colletLabel + (tool.holder ? ' (' + dict.holderLabel + ' ' + tool.holder + ')' : ''),
+          tool: (tool.name || '') + ' — ' + dict.colletLabel + ((tool.collet && tool.collet.model) ? ' ' + tool.collet.model : '') + (tool.holder ? ' (' + dict.holderLabel + ' ' + tool.holder + ')' : ''),
           date: new Date(h.date),
           condition: '—',
           reason: dict.histCollet,
