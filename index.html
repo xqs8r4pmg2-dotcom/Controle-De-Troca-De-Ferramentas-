@@ -725,13 +725,38 @@ body.printing #reportArea{
   </div>
 </div>
 
-<!-- modal: editar data/hora de um lançamento -->
+<!-- modal: editar um lançamento (data/hora, condição, motivo, observação) -->
 <div class="overlay" id="editDateOverlay">
   <div class="modal">
-    <p class="card-title" data-i18n="modalEditDateTitle">Corrigir data e hora</p>
+    <p class="card-title" data-i18n="modalEditEntryTitle">Corrigir lançamento</p>
+    <p class="modal-sub" id="editEntrySub">—</p>
     <div class="field">
       <label data-i18n="fieldDateTime">Data e hora</label>
       <input type="datetime-local" id="ed-datetime">
+    </div>
+    <div id="ed-reset-fields" style="display:none;">
+      <div class="field">
+        <label data-i18n="fieldCondition">Condição da ferramenta instalada</label>
+        <select id="ed-condition">
+          <option value="new" data-i18n-opt="conditionNew">Nova (新品)</option>
+          <option value="reground" data-i18n-opt="conditionReground">Reafiada (再研)</option>
+          <option value="reversed" data-i18n-opt="conditionReversed">Lado invertido (反対)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label data-i18n="fieldReason">Motivo da troca</label>
+        <input type="text" id="ed-reason" list="reason-list">
+      </div>
+      <div class="field">
+        <label data-i18n="fieldNote">Observação (opcional)</label>
+        <textarea id="ed-note"></textarea>
+      </div>
+    </div>
+    <div id="ed-add-fields" style="display:none;">
+      <div class="field">
+        <label data-i18n="fieldQuantity">Quantidade registrada</label>
+        <input type="number" id="ed-amount" step="0.1">
+      </div>
     </div>
     <div class="form-actions">
       <button class="btn ghost" id="cancelEditDate" data-i18n="btnCancel">Cancelar</button>
@@ -788,7 +813,7 @@ const I18N = {
     modalEditTitle: "Editar ferramenta",
     modalEditSub: "Corrija dados cadastrados incorretamente.",
     modalHistTitle: "Histórico de lançamentos",
-    histModalSub: (name) => `${name} — toque no 🗑 para apagar um lançamento errado`,
+    histModalSub: (name) => `${name} — 🕐 corrigir · 🗑 apagar`,
     histAdd: (amount, unit) => `+ ${amount} ${unit}`,
     histReset: (reason) => `Troca — ${reason}`,
     histEmpty: "Nenhum lançamento ainda.",
@@ -826,6 +851,13 @@ const I18N = {
     fieldDateTime: "Data e hora",
     editDateTime: "Data/hora",
     modalEditDateTitle: "Corrigir data e hora",
+    modalEditEntryTitle: "Corrigir lançamento",
+    editEntrySubReset: "Troca de ferramenta",
+    editEntrySubAdd: "Registro de uso",
+    editEntrySubCollet: "Troca de colete",
+    fieldQuantity: "Quantidade registrada",
+    fillRequiredAmount: "Informe uma quantidade válida.",
+    histEditHint: "toque no 🕐 para corrigir · 🗑 para apagar",
     btnEditDate: "🕐",
     fillRequiredDate: "Selecione uma data e hora válidas.",
     fieldCondition: "Condição da ferramenta instalada",
@@ -889,7 +921,7 @@ const I18N = {
     modalEditTitle: "工具を編集",
     modalEditSub: "誤って登録した情報を修正します。",
     modalHistTitle: "記録履歴",
-    histModalSub: (name) => `${name} — 🗑をタップして誤った記録を削除`,
+    histModalSub: (name) => `${name} — 🕐修正 · 🗑削除`,
     histAdd: (amount, unit) => `+ ${amount} ${unit}`,
     histReset: (reason) => `交換 — ${reason}`,
     histEmpty: "まだ記録がありません。",
@@ -927,6 +959,13 @@ const I18N = {
     fieldDateTime: "日時",
     editDateTime: "日時",
     modalEditDateTitle: "日時を修正",
+    modalEditEntryTitle: "記録を修正",
+    editEntrySubReset: "工具交換",
+    editEntrySubAdd: "使用記録",
+    editEntrySubCollet: "コレット交換",
+    fieldQuantity: "記録された数量",
+    fillRequiredAmount: "有効な数量を入力してください。",
+    histEditHint: "🕐で修正 · 🗑で削除",
     btnEditDate: "🕐",
     fillRequiredDate: "有効な日時を選択してください。",
     fieldCondition: "取付工具の状態",
@@ -1384,7 +1423,7 @@ document.getElementById('closeHist').addEventListener('click', () => {
   historyToolId = null;
 });
 
-/* ---------- modal: corrigir data/hora de um lançamento ---------- */
+/* ---------- modal: corrigir um lançamento (data/hora, condição, motivo, obs.) ---------- */
 const editDateOverlay = document.getElementById('editDateOverlay');
 let pendingEditDate = null; // { toolId, idx }
 
@@ -1393,8 +1432,36 @@ function openEditDateModal(toolId, idx){
   if(!tool) return;
   const entry = tool.history[idx];
   if(!entry) return;
+  const dict = t();
   pendingEditDate = { toolId, idx };
+
   document.getElementById('ed-datetime').value = isoToDatetimeLocalValue(entry.date);
+
+  const resetFields = document.getElementById('ed-reset-fields');
+  const addFields = document.getElementById('ed-add-fields');
+  const subEl = document.getElementById('editEntrySub');
+
+  if(entry.type === 'reset'){
+    subEl.textContent = `${tool.name} — ${dict.editEntrySubReset}`;
+    resetFields.style.display = 'block';
+    addFields.style.display = 'none';
+    document.getElementById('ed-condition').value = entry.condition || 'new';
+    document.getElementById('ed-reason').value = reasonLabel(entry.reason, dict);
+    document.getElementById('ed-note').value = entry.note || '';
+    // atualiza as sugestões de motivo
+    document.getElementById('reason-list').innerHTML =
+      collectReasonSuggestions().map(r => `<option value="${escapeHtml(r)}">`).join('');
+  } else if(entry.type === 'add'){
+    subEl.textContent = `${tool.name} — ${dict.editEntrySubAdd}`;
+    resetFields.style.display = 'none';
+    addFields.style.display = 'block';
+    document.getElementById('ed-amount').value = entry.amount;
+  } else {
+    subEl.textContent = `${tool.name} — ${dict.editEntrySubCollet}`;
+    resetFields.style.display = 'none';
+    addFields.style.display = 'none';
+  }
+
   editDateOverlay.classList.add('open');
 }
 
@@ -1410,11 +1477,32 @@ document.getElementById('confirmEditDate').addEventListener('click', () => {
   if(!tool) return;
   const entry = tool.history[idx];
   if(!entry) return;
+  const dict = t();
 
   const val = document.getElementById('ed-datetime').value;
   if(!val){
-    alert(t().fillRequiredDate);
+    alert(dict.fillRequiredDate);
     return;
+  }
+
+  if(entry.type === 'reset'){
+    const newReason = document.getElementById('ed-reason').value.trim();
+    if(!newReason){
+      alert(dict.fillRequiredReason);
+      return;
+    }
+    entry.condition = document.getElementById('ed-condition').value;
+    entry.reason = newReason;
+    entry.note = document.getElementById('ed-note').value.trim();
+  } else if(entry.type === 'add'){
+    const newAmount = parseFloat(document.getElementById('ed-amount').value);
+    if(isNaN(newAmount) || newAmount <= 0){
+      alert(dict.fillRequiredAmount);
+      return;
+    }
+    // ajusta o total acumulado pela diferença entre o valor antigo e o novo
+    tool.used = Math.max(0, tool.used - entry.amount + newAmount);
+    entry.amount = newAmount;
   }
 
   entry.date = new Date(val).toISOString();
