@@ -351,6 +351,76 @@ header p{ margin: 2px 0 0; color: var(--muted); font-size: 10.5px; }
   padding: 10px 12px;
   margin-bottom: 12px;
 }
+
+/* ---- busca ---- */
+.searchbar{
+  display:flex; align-items:center; gap:8px;
+  background: #0d0f11;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px 12px;
+  margin-bottom: 12px;
+}
+.searchbar .search-icon{ font-size: 15px; flex:0 0 auto; opacity:0.7; }
+.searchbar input[type="search"]{
+  flex:1; min-width:0;
+  background: transparent;
+  border:none;
+  color: var(--text);
+  font-family:'IBM Plex Mono','Noto Sans JP',monospace;
+  font-size: 14px;
+  padding: 9px 0;
+  outline:none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.searchbar input[type="search"]::-webkit-search-cancel-button{ -webkit-appearance:none; }
+.clear-search{
+  flex:0 0 auto;
+  background: transparent; border:none;
+  color: var(--muted); font-size: 15px; cursor:pointer;
+  padding: 4px 6px;
+}
+
+/* ---- ordenação ---- */
+.sort-bar{
+  display:flex; align-items:center; gap:10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.sort-bar label{ font-size: 11.5px; color: var(--muted); white-space:nowrap; }
+.sort-bar select{
+  flex:1; min-width:0;
+  background: #0d0f11;
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-family:'IBM Plex Mono','Noto Sans JP',monospace;
+  font-size: 13px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  outline:none;
+}
+
+/* ---- setas de reordenação ---- */
+.move-btns{ display:flex; gap:6px; flex:0 0 auto; }
+.move-btn{
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor:pointer;
+  font-family:'IBM Plex Mono',monospace;
+}
+.move-btn:disabled{ opacity: 0.3; }
+.no-results{
+  text-align:center; color: var(--muted); font-size:13px;
+  padding: 26px 12px; border:1px dashed var(--line); border-radius:10px;
+}
 .filter-bar label{ font-size: 11.5px; color: var(--muted); white-space:nowrap; }
 .filter-bar select{
   flex:1;
@@ -681,10 +751,24 @@ body.printing #reportArea{
     </div>
   </div>
 
+  <div class="searchbar" id="searchBar" style="display:none;">
+    <span class="search-icon">🔍</span>
+    <input type="search" id="searchInput" placeholder="">
+    <button id="clearSearch" class="clear-search" style="display:none;">✕</button>
+  </div>
+
   <div class="filter-bar" id="filterBar" style="display:none;">
     <label data-i18n="filterLabel">Filtrar por peça</label>
     <select id="filterPart">
       <option value="" data-i18n-opt="allParts">Todas as peças</option>
+    </select>
+  </div>
+
+  <div class="sort-bar" id="sortBar" style="display:none;">
+    <label data-i18n="sortLabel">Ordem</label>
+    <select id="sortMode">
+      <option value="auto" data-i18n-opt="sortAuto">Automática (mais desgastadas primeiro)</option>
+      <option value="manual" data-i18n-opt="sortManual">Manual (com setas ↑↓)</option>
     </select>
   </div>
 
@@ -887,6 +971,13 @@ const I18N = {
     footer: "dados salvos automaticamente neste aparelho, offline",
     empty: "Nenhuma ferramenta cadastrada ainda.\nToque em \"+ Nova ferramenta\" para começar.",
     filterLabel: "Filtrar por peça",
+    searchPlaceholder: "Buscar ferramenta, peça, holder...",
+    noResults: "Nenhuma ferramenta encontrada para esta busca.",
+    sortLabel: "Ordem",
+    sortAuto: "Automática (mais desgastadas primeiro)",
+    sortManual: "Manual (com setas ↑↓)",
+    moveUp: "↑",
+    moveDown: "↓",
     allParts: "Todas as peças",
     emptyFiltered: "Nenhuma ferramenta cadastrada para esta peça.",
     statusOk: "OK", statusWarn: "Atenção", statusDanger: "Trocar agora",
@@ -998,6 +1089,13 @@ const I18N = {
     footer: "データはこの端末にオフラインで自動保存されます",
     empty: "登録された工具はまだありません。\n「+ 新しい工具」をタップして開始してください。",
     filterLabel: "製品モデルで絞り込み",
+    searchPlaceholder: "工具・製品・ホルダーを検索...",
+    noResults: "検索条件に一致する工具がありません。",
+    sortLabel: "並び順",
+    sortAuto: "自動(摩耗が多い順)",
+    sortManual: "手動(↑↓ボタンで並び替え)",
+    moveUp: "↑",
+    moveDown: "↓",
     allParts: "すべての製品",
     emptyFiltered: "この製品モデル用の工具はまだ登録されていません。",
     statusOk: "OK", statusWarn: "注意", statusDanger: "今すぐ交換",
@@ -1098,7 +1196,10 @@ const I18N = {
 
 let currentLang = 'pt';
 let tools = [];
+let sortMode = 'auto';           // 'auto' = por desgaste · 'manual' = ordem definida pelo usuário
+let searchTerm = '';
 const STORAGE_KEY = 'ferramentas_tools_v1';
+const SORTMODE_KEY = 'ferramentas_sortmode_v1';
 let pendingResetToolId = null;
 
 function t(){ return I18N[currentLang]; }
@@ -1111,6 +1212,15 @@ function loadTools(){
   } catch(e){
     tools = [];
   }
+  try{
+    sortMode = localStorage.getItem(SORTMODE_KEY) || 'auto';
+  } catch(e){
+    sortMode = 'auto';
+  }
+  // garante que toda ferramenta tenha uma posição manual definida
+  tools.forEach((tool, i) => {
+    if(typeof tool.order !== 'number') tool.order = i;
+  });
 }
 
 function saveTools(){
@@ -1158,6 +1268,7 @@ document.getElementById('restoreFile').addEventListener('change', (e) => {
       if(!data || !Array.isArray(data.tools)) throw new Error('invalid');
       if(!confirm(t().restoreConfirm)) { e.target.value = ''; return; }
       tools = data.tools;
+      tools.forEach((tool, i) => { if(typeof tool.order !== 'number') tool.order = i; });
       saveTools();
       render();
       alert(t().restoreSuccess);
@@ -1184,10 +1295,45 @@ function applyLang(lang){
   document.getElementById('btn-pt').classList.toggle('active', lang==='pt');
   document.getElementById('btn-ja').classList.toggle('active', lang==='ja');
   document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'ja';
+  document.getElementById('searchInput').placeholder = I18N[lang].searchPlaceholder;
   render();
 }
 document.getElementById('btn-pt').addEventListener('click', () => applyLang('pt'));
 document.getElementById('btn-ja').addEventListener('click', () => applyLang('ja'));
+
+/* ---------- busca e ordenação ---------- */
+const searchInput = document.getElementById('searchInput');
+const clearSearchBtn = document.getElementById('clearSearch');
+
+searchInput.addEventListener('input', () => {
+  searchTerm = searchInput.value.trim().toLowerCase();
+  clearSearchBtn.style.display = searchTerm ? 'block' : 'none';
+  render();
+});
+clearSearchBtn.addEventListener('click', () => {
+  searchInput.value = '';
+  searchTerm = '';
+  clearSearchBtn.style.display = 'none';
+  render();
+});
+
+document.getElementById('sortMode').addEventListener('change', (e) => {
+  sortMode = e.target.value;
+  try{ localStorage.setItem(SORTMODE_KEY, sortMode); } catch(err){}
+  render();
+});
+
+// procura em nome da ferramenta, modelo da peça, holder e modelo do colete
+function matchesSearch(tool){
+  if(!searchTerm) return true;
+  const haystack = [
+    tool.name,
+    tool.partmodel,
+    tool.holder,
+    tool.collet && tool.collet.model
+  ].filter(Boolean).join(' ').toLowerCase();
+  return haystack.includes(searchTerm);
+}
 
 /* ---------- form toggle ---------- */
 const formCard = document.getElementById('formCard');
@@ -1287,6 +1433,7 @@ document.getElementById('saveForm').addEventListener('click', () => {
   tools.push({
     id: 't' + Date.now(),
     name, partmodel, unit, maxlife,
+    order: tools.length,
     alertPct: Math.min(99, Math.max(1, alertPct)),
     used: 0,
     lastChange: null,
@@ -1767,6 +1914,9 @@ function render(){
   datalist.innerHTML = partModels.map(p => `<option value="${escapeHtml(p)}">`).join('');
 
   filterBar.style.display = tools.length > 0 ? 'flex' : 'none';
+  document.getElementById('searchBar').style.display = tools.length > 0 ? 'flex' : 'none';
+  document.getElementById('sortBar').style.display = tools.length > 0 ? 'flex' : 'none';
+  document.getElementById('sortMode').value = sortMode;
 
   if(tools.length === 0){
     const empty = document.createElement('div');
@@ -1778,7 +1928,7 @@ function render(){
   }
 
   const activeFilter = filterSelect.value;
-  const filtered = activeFilter ? tools.filter(x => x.partmodel === activeFilter) : tools;
+  let filtered = activeFilter ? tools.filter(x => x.partmodel === activeFilter) : tools;
 
   if(filtered.length === 0){
     const empty = document.createElement('div');
@@ -1788,7 +1938,19 @@ function render(){
     return;
   }
 
-  const sorted = [...filtered].sort((a,b) => (b.used/b.maxlife) - (a.used/a.maxlife));
+  // aplica a busca por texto depois do filtro de peça
+  filtered = filtered.filter(matchesSearch);
+  if(filtered.length === 0){
+    const noRes = document.createElement('div');
+    noRes.className = 'no-results';
+    noRes.textContent = dict.noResults;
+    listEl.appendChild(noRes);
+    return;
+  }
+
+  const sorted = sortMode === 'manual'
+    ? [...filtered].sort((a,b) => (a.order ?? 0) - (b.order ?? 0))
+    : [...filtered].sort((a,b) => (b.used/b.maxlife) - (a.used/a.maxlife));
 
   sorted.forEach(tool => {
     const pct = Math.min(999, (tool.used / tool.maxlife) * 100);
@@ -1833,6 +1995,11 @@ function render(){
         <input type="datetime-local" data-add-datetime="${tool.id}" value="${nowDatetimeLocalValue()}">
       </div>
       <div class="tool-actions" style="margin-top:8px;">
+        ${sortMode === 'manual' ? `
+        <div class="move-btns">
+          <button class="move-btn" data-move-up="${tool.id}">${dict.moveUp}</button>
+          <button class="move-btn" data-move-down="${tool.id}">${dict.moveDown}</button>
+        </div>` : ''}
         <button class="small-btn edit" data-edit-btn="${tool.id}">${dict.btnEdit}</button>
         <button class="small-btn hist" data-hist-btn="${tool.id}">${dict.btnHistory}</button>
         <button class="small-btn del" data-del-btn="${tool.id}">${dict.btnDelete}</button>
@@ -1894,6 +2061,28 @@ function render(){
       const now = new Date().toISOString();
       tool.history.push({ type: 'collet', date: now, amount: tool.collet.intervalDays, unit: 'dias' });
       tool.collet.lastChange = now;
+      saveTools();
+      render();
+    });
+  });
+
+  // reordenação manual: troca a posição com o vizinho na lista exibida
+  listEl.querySelectorAll('[data-move-up], [data-move-down]').forEach(btn => {
+    const isUp = btn.hasAttribute('data-move-up');
+    const id = btn.getAttribute(isUp ? 'data-move-up' : 'data-move-down');
+    const pos = sorted.findIndex(x => x.id === id);
+    if((isUp && pos === 0) || (!isUp && pos === sorted.length - 1)){
+      btn.disabled = true;
+      return;
+    }
+    btn.addEventListener('click', () => {
+      const neighbour = sorted[isUp ? pos - 1 : pos + 1];
+      const current = sorted[pos];
+      // normaliza as posições antes de trocar, evitando empates
+      sorted.forEach((tl, i) => { tl.order = i; });
+      const tmp = current.order;
+      current.order = neighbour.order;
+      neighbour.order = tmp;
       saveTools();
       render();
     });
