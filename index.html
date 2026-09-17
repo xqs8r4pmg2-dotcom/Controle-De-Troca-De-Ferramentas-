@@ -103,6 +103,51 @@ header p{ margin: 2px 0 0; color: var(--muted); font-size: 10.5px; }
   letter-spacing: 0.5px;
 }
 .add-btn:active{ background: var(--panel-2); }
+.add-btn.batch{
+  border-style: solid;
+  border-color: rgba(79,163,255,0.4);
+  color: var(--blue);
+  margin-bottom: 10px;
+}
+
+/* ---- modal de registro em lote ---- */
+.batch-toolbar{ display:flex; gap:8px; margin: 12px 0 8px; }
+.batch-sel-btn{
+  flex:1;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 8px;
+  font-family:'IBM Plex Mono','Noto Sans JP',sans-serif;
+  font-size: 11.5px;
+  cursor:pointer;
+}
+.batch-list{
+  max-height: 40vh;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px;
+}
+.batch-item{
+  display:flex; align-items:flex-start; gap:10px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+.batch-item:last-child{ border-bottom:none; }
+.batch-item input[type="checkbox"]{
+  width: 20px; height: 20px; flex:0 0 auto; margin-top: 2px;
+  accent-color: var(--amber);
+}
+.batch-item .info{ flex:1; min-width:0; }
+.batch-item .n{ font-size: 13px; font-weight:600; color: var(--text); word-break: break-word; }
+.batch-item .m{ font-size: 11px; color: var(--muted); margin-top: 2px; }
+.batch-item.checked{ background: rgba(255,177,0,0.06); }
+.batch-count{
+  font-size: 12px; color: var(--amber); text-align:center; margin: 10px 0 0; font-weight:600;
+}
 
 /* ---- formulário / modal ---- */
 .form-card{
@@ -684,6 +729,7 @@ body.printing #reportArea{
     <input type="file" id="restoreFile" accept=".json,application/json,text/plain,text/json">
   </div>
 
+  <button class="add-btn batch" id="btnBatch" data-i18n="batchBtn">⚡ Registrar em várias ferramentas</button>
   <button class="add-btn" id="toggleForm" data-i18n="addToolBtn">+ Nova ferramenta</button>
 
   <div class="form-card" id="formCard">
@@ -805,6 +851,10 @@ body.printing #reportArea{
       <label data-i18n="fieldNote">Observação (opcional)</label>
       <textarea id="r-note" placeholder=""></textarea>
     </div>
+    <div class="field">
+      <label data-i18n="fieldHolderReset">Holder utilizado (ホルダー)</label>
+      <div class="holder-grid" id="r-holder-grid"></div>
+    </div>
     <div class="form-actions">
       <button class="btn ghost" id="cancelReset" data-i18n="btnCancel">Cancelar</button>
       <button class="btn primary" id="confirmReset" data-i18n="btnConfirmReset">Confirmar troca</button>
@@ -897,6 +947,34 @@ body.printing #reportArea{
   </div>
 </div>
 
+<!-- modal: registrar quantidade em várias ferramentas -->
+<div class="overlay" id="batchOverlay">
+  <div class="modal">
+    <p class="card-title" data-i18n="modalBatchTitle">Registrar em várias ferramentas</p>
+    <p class="modal-sub" data-i18n="modalBatchSub">Marque as ferramentas que rodaram e informe a quantidade uma única vez.</p>
+    <div class="formrow">
+      <div class="field">
+        <label data-i18n="fieldQuantity">Quantidade registrada</label>
+        <input type="number" id="b-amount" step="0.1" placeholder="Ex: 400">
+      </div>
+      <div class="field">
+        <label data-i18n="fieldDateTime">Data e hora</label>
+        <input type="datetime-local" id="b-datetime">
+      </div>
+    </div>
+    <div class="batch-toolbar">
+      <button class="batch-sel-btn" id="b-selectAll" data-i18n="btnSelectAll">Marcar todas</button>
+      <button class="batch-sel-btn" id="b-selectNone" data-i18n="btnSelectNone">Desmarcar todas</button>
+    </div>
+    <div class="batch-list" id="batchList"></div>
+    <p class="batch-count" id="batchCount"></p>
+    <div class="form-actions">
+      <button class="btn ghost" id="cancelBatch" data-i18n="btnCancel">Cancelar</button>
+      <button class="btn primary" id="confirmBatch" data-i18n="btnConfirmBatch">Registrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- modal: editar um lançamento (data/hora, condição, motivo, observação) -->
 <div class="overlay" id="editDateOverlay">
   <div class="modal">
@@ -923,6 +1001,10 @@ body.printing #reportArea{
       <div class="field">
         <label data-i18n="fieldNote">Observação (opcional)</label>
         <textarea id="ed-note"></textarea>
+      </div>
+      <div class="field">
+        <label data-i18n="fieldHolderReset">Holder utilizado (ホルダー)</label>
+        <div class="holder-grid" id="ed-holder-grid"></div>
       </div>
     </div>
     <div id="ed-add-fields" style="display:none;">
@@ -1001,6 +1083,16 @@ const I18N = {
     confirmDelHistReset: "Apagar este registro de troca? Ele só será removido do histórico/relatório — o contador atual não muda.",
     accessoriesTitle: "Acessórios (opcional)",
     fieldHolder: "Holder (ホルダー) — toque para selecionar",
+    fieldHolderReset: "Holder utilizado (ホルダー)",
+    batchBtn: "⚡ Registrar em várias ferramentas",
+    modalBatchTitle: "Registrar em várias ferramentas",
+    modalBatchSub: "Marque as ferramentas que rodaram e informe a quantidade uma única vez.",
+    btnSelectAll: "Marcar todas",
+    btnSelectNone: "Desmarcar todas",
+    btnConfirmBatch: "Registrar",
+    batchCount: (n) => n === 1 ? "1 ferramenta marcada" : `${n} ferramentas marcadas`,
+    batchNoneSelected: "Marque pelo menos uma ferramenta.",
+    batchDone: (n, qty) => `${qty} registrado em ${n} ${n === 1 ? 'ferramenta' : 'ferramentas'}.`,
     fieldColletModel: "Modelo do colete",
     colletModelLabel: "Modelo",
     holderNone: "Nenhum",
@@ -1119,6 +1211,16 @@ const I18N = {
     confirmDelHistReset: "この交換記録を削除しますか?履歴/レポートから削除されるだけで、現在のカウンターは変わりません。",
     accessoriesTitle: "アクセサリー(任意)",
     fieldHolder: "ホルダー — タップして選択",
+    fieldHolderReset: "使用するホルダー",
+    batchBtn: "⚡ 複数工具に一括記録",
+    modalBatchTitle: "複数工具に一括記録",
+    modalBatchSub: "稼働した工具にチェックを入れ、数量を一度だけ入力してください。",
+    btnSelectAll: "すべて選択",
+    btnSelectNone: "選択解除",
+    btnConfirmBatch: "記録",
+    batchCount: (n) => `${n}件の工具を選択中`,
+    batchNoneSelected: "工具を1つ以上選択してください。",
+    batchDone: (n, qty) => `${n}件の工具に${qty}を記録しました。`,
     fieldColletModel: "コレット型番",
     colletModelLabel: "型番",
     holderNone: "なし",
@@ -1371,7 +1473,7 @@ function todayISODate(){
 
 // formato exigido por <input type="datetime-local">: "YYYY-MM-DDTHH:MM"
 /* ---------- grade de seleção de Holder ---------- */
-const HOLDER_OPTIONS = ['H1','H2','H3','H4','H5','H6','H7','H8','H9','H10'];
+const HOLDER_OPTIONS = ['H1','H2','H3','H4','H5','H6','H7','H8','H9','H10','H11','H12'];
 
 // monta a grade dentro de um container; selecionar de novo o mesmo item desmarca
 function buildHolderGrid(containerId, selectedValue){
@@ -1463,6 +1565,106 @@ document.getElementById('saveForm').addEventListener('click', () => {
   render();
 });
 
+/* ---------- modal: registrar em várias ferramentas ---------- */
+const batchOverlay = document.getElementById('batchOverlay');
+
+function openBatchModal(){
+  const dict = t();
+  document.getElementById('b-amount').value = '';
+  document.getElementById('b-datetime').value = nowDatetimeLocalValue();
+  renderBatchList();
+  batchOverlay.classList.add('open');
+}
+
+function renderBatchList(){
+  const dict = t();
+  const listEl = document.getElementById('batchList');
+  // mantém a mesma ordem que o usuário vê na tela principal
+  const ordered = sortMode === 'manual'
+    ? [...tools].sort((a,b) => (a.order ?? 0) - (b.order ?? 0))
+    : [...tools].sort((a,b) => (b.used/b.maxlife) - (a.used/a.maxlife));
+
+  listEl.innerHTML = ordered.map(tool => {
+    const unitLabel = dict.unitLabel[tool.unit] || tool.unit;
+    const meta = [tool.partmodel, tool.holder].filter(Boolean).join(' · ');
+    return `
+      <label class="batch-item" data-batch-item="${tool.id}">
+        <input type="checkbox" data-batch-check="${tool.id}">
+        <span class="info">
+          <span class="n">${escapeHtml(tool.name)}</span>
+          <span class="m">${escapeHtml(meta)} — ${fmtNum(tool.used)}/${fmtNum(tool.maxlife)} ${unitLabel}</span>
+        </span>
+      </label>`;
+  }).join('');
+
+  listEl.querySelectorAll('[data-batch-check]').forEach(chk => {
+    chk.addEventListener('change', () => {
+      chk.closest('.batch-item').classList.toggle('checked', chk.checked);
+      updateBatchCount();
+    });
+  });
+  updateBatchCount();
+}
+
+function updateBatchCount(){
+  const n = document.querySelectorAll('#batchList [data-batch-check]:checked').length;
+  document.getElementById('batchCount').textContent = t().batchCount(n);
+}
+
+document.getElementById('btnBatch').addEventListener('click', openBatchModal);
+document.getElementById('cancelBatch').addEventListener('click', () => batchOverlay.classList.remove('open'));
+
+document.getElementById('b-selectAll').addEventListener('click', () => {
+  document.querySelectorAll('#batchList [data-batch-check]').forEach(chk => {
+    chk.checked = true;
+    chk.closest('.batch-item').classList.add('checked');
+  });
+  updateBatchCount();
+});
+document.getElementById('b-selectNone').addEventListener('click', () => {
+  document.querySelectorAll('#batchList [data-batch-check]').forEach(chk => {
+    chk.checked = false;
+    chk.closest('.batch-item').classList.remove('checked');
+  });
+  updateBatchCount();
+});
+
+document.getElementById('confirmBatch').addEventListener('click', () => {
+  const dict = t();
+  const amount = parseFloat(document.getElementById('b-amount').value);
+  const datetimeVal = document.getElementById('b-datetime').value;
+
+  if(isNaN(amount) || amount <= 0){
+    alert(dict.fillRequiredAmount);
+    return;
+  }
+  if(!datetimeVal){
+    alert(dict.fillRequiredDate);
+    return;
+  }
+
+  const selectedIds = [...document.querySelectorAll('#batchList [data-batch-check]:checked')]
+    .map(chk => chk.getAttribute('data-batch-check'));
+
+  if(selectedIds.length === 0){
+    alert(dict.batchNoneSelected);
+    return;
+  }
+
+  const entryDate = new Date(datetimeVal).toISOString();
+  selectedIds.forEach(id => {
+    const tool = tools.find(x => x.id === id);
+    if(!tool) return;
+    tool.used += amount;
+    tool.history.push({ type: 'add', date: entryDate, amount, unit: tool.unit });
+  });
+
+  batchOverlay.classList.remove('open');
+  saveTools();
+  render();
+  alert(dict.batchDone(selectedIds.length, fmtNum(amount)));
+});
+
 /* ---------- modal: motivo da troca ---------- */
 const resetOverlay = document.getElementById('resetOverlay');
 
@@ -1526,6 +1728,8 @@ function openResetModal(toolId){
   const datalist = document.getElementById('reason-list');
   datalist.innerHTML = collectReasonSuggestions().map(r => `<option value="${escapeHtml(r)}">`).join('');
   buildReasonChips('r-reason-chips', 'r-reason');
+  // já vem marcado o holder atual, para confirmar rápido quando não muda
+  buildHolderGrid('r-holder-grid', tool.holder || null);
   resetOverlay.classList.add('open');
 }
 
@@ -1541,6 +1745,7 @@ document.getElementById('confirmReset').addEventListener('click', () => {
   const condition = document.getElementById('r-condition').value;
   const reason = document.getElementById('r-reason').value.trim();
   const note = document.getElementById('r-note').value.trim();
+  const chosenHolder = getSelectedHolder('r-holder-grid');
 
   if(!reason){
     alert(t().fillRequiredReason);
@@ -1560,10 +1765,13 @@ document.getElementById('confirmReset').addEventListener('click', () => {
     unit: tool.unit,
     condition,
     reason,
-    note
+    note,
+    holder: chosenHolder
   });
   tool.used = 0;
   tool.lastChange = chosenDate;
+  // o holder escolhido na troca passa a ser o holder atual da ferramenta
+  tool.holder = chosenHolder;
 
   document.getElementById('r-note').value = '';
   document.getElementById('r-reason').value = '';
@@ -1769,6 +1977,7 @@ function openEditDateModal(toolId, idx){
     document.getElementById('reason-list').innerHTML =
       collectReasonSuggestions().map(r => `<option value="${escapeHtml(r)}">`).join('');
     buildReasonChips('ed-reason-chips', 'ed-reason');
+    buildHolderGrid('ed-holder-grid', entry.holder || tool.holder || null);
   } else if(entry.type === 'add'){
     subEl.textContent = `${tool.name} — ${dict.editEntrySubAdd}`;
     resetFields.style.display = 'none';
@@ -1812,6 +2021,11 @@ document.getElementById('confirmEditDate').addEventListener('click', () => {
     entry.condition = document.getElementById('ed-condition').value;
     entry.reason = newReason;
     entry.note = document.getElementById('ed-note').value.trim();
+    entry.holder = getSelectedHolder('ed-holder-grid');
+    // se for a troca mais recente, o holder dela é o holder atual da ferramenta
+    const latest = [...tool.history].filter(h => h.type === 'reset')
+      .sort((a,b) => new Date(b.date) - new Date(a.date))[0];
+    if(latest === entry) tool.holder = entry.holder;
   } else if(entry.type === 'add'){
     const newAmount = parseFloat(document.getElementById('ed-amount').value);
     if(isNaN(newAmount) || newAmount <= 0){
@@ -2122,7 +2336,7 @@ document.getElementById('btnReport').addEventListener('click', () => {
       if(h.type === 'reset'){
         rows.push({
           part: tool.partmodel || '—',
-          tool: tool.name,
+          tool: tool.name + ((h.holder || tool.holder) ? ' (' + dict.holderLabel + ' ' + (h.holder || tool.holder) + ')' : ''),
           date: new Date(h.date),
           condition: conditionLabel(h.condition, dict),
           reason: reasonLabel(h.reason, dict),
