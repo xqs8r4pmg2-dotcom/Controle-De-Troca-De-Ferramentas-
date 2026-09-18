@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -645,6 +645,16 @@ body.printing #reportArea{
 #reportArea h2{ font-family: Arial, sans-serif; margin: 0 0 4px; font-size: 16px; color:#000; }
 #reportArea .meta{ font-family: Arial, sans-serif; font-size: 10px; color:#333; margin-bottom: 10px; }
 
+/* ---- gráficos do relatório ---- */
+#reportCharts{ margin-bottom: 16px; }
+.chart-block{ margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid; }
+.chart-title{
+  font-family: Arial, sans-serif; font-size: 12px; font-weight:700;
+  color:#000; margin: 0 0 6px; border-bottom: 1px solid #ccc; padding-bottom: 3px;
+}
+.chart-block svg{ width:100%; height:auto; display:block; }
+.chart-empty{ font-family: Arial, sans-serif; font-size: 10px; color:#666; padding: 6px 0; }
+
 /* ==========================================================
    RESPONSIVO — tablets e telas maiores
    O mesmo arquivo se adapta: celular (coluna única) até
@@ -1028,6 +1038,7 @@ body.printing #reportArea{
   </div>
   <h2 id="reportTitle">Relatório de Trocas de Ferramentas</h2>
   <div class="meta" id="reportMeta"></div>
+  <div id="reportCharts"></div>
   <table>
     <thead>
       <tr id="reportHeadRow"></tr>
@@ -1155,6 +1166,10 @@ const I18N = {
     restoreSuccess: "Backup restaurado com sucesso.",
     restoreError: "Arquivo inválido. Selecione um backup exportado por este app.",
     reportTitle: "Relatório de Trocas de Ferramentas",
+    chartByReason: "Trocas por motivo",
+    chartByTool: "Trocas por ferramenta",
+    chartNoData: "Sem trocas registradas para gerar os gráficos.",
+    chartTotalLabel: (n) => `total: ${n}`,
     reportGenerated: "Gerado em",
     reportEmpty: "Nenhuma troca registrada ainda.",
     colPart: "Modelo da Peça",
@@ -1283,6 +1298,10 @@ const I18N = {
     restoreSuccess: "バックアップを復元しました。",
     restoreError: "無効なファイルです。このアプリで作成したバックアップを選択してください。",
     reportTitle: "工具交換レポート",
+    chartByReason: "理由別の交換件数",
+    chartByTool: "工具別の交換件数",
+    chartNoData: "グラフを作成するための交換記録がありません。",
+    chartTotalLabel: (n) => `合計: ${n}件`,
     reportGenerated: "作成日時",
     reportEmpty: "交換履歴はまだありません。",
     colPart: "製品モデル",
@@ -1895,7 +1914,10 @@ function renderHistory(){
     let line1, line2;
     if(h.type === 'reset'){
       const condTxt = h.condition ? conditionLabel(h.condition, dict) : null;
-      line1 = dict.histReset(reasonLabel(h.reason, dict)) + (condTxt ? ` · ${condTxt}` : '');
+      const holderTxt = h.holder ? `${dict.holderLabel} ${h.holder}` : null;
+      line1 = dict.histReset(reasonLabel(h.reason, dict))
+        + (condTxt ? ` · ${condTxt}` : '')
+        + (holderTxt ? ` · ${holderTxt}` : '');
       line2 = `${dateStr}${h.note ? ' · ' + escapeHtml(h.note) : ''} · ${fmtNum(h.amount)} ${dict.unitLabel[h.unit] || h.unit}`;
     } else if(h.type === 'collet'){
       line1 = dict.histCollet;
@@ -2328,6 +2350,82 @@ function render(){
 }
 
 /* ---------- relatório / PDF (via impressão do navegador) ---------- */
+/* ---------- gráficos do relatório (SVG puro, sem bibliotecas) ---------- */
+
+// gráfico de barras horizontais; data = [{label, value}]
+function buildBarChartSvg(data, maxBars){
+  const rows = data.slice(0, maxBars);
+  const rowH = 22;
+  const gap = 6;
+  const labelW = 190;
+  const chartW = 700;
+  const barAreaW = chartW - labelW - 60;
+  const height = rows.length * (rowH + gap) + 6;
+  const maxVal = Math.max(...rows.map(r => r.value), 1);
+
+  const bars = rows.map((r, i) => {
+    const y = i * (rowH + gap);
+    const w = Math.max(2, (r.value / maxVal) * barAreaW);
+    // encurta rótulos muito longos para não invadir a área das barras
+    const label = r.label.length > 28 ? r.label.slice(0, 27) + '…' : r.label;
+    return `
+      <text x="0" y="${y + rowH * 0.7}" font-family="Arial, sans-serif" font-size="11" fill="#000">${escapeHtml(label)}</text>
+      <rect x="${labelW}" y="${y + 3}" width="${w}" height="${rowH - 6}" fill="#4a5568" />
+      <text x="${labelW + w + 6}" y="${y + rowH * 0.7}" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#000">${r.value}</text>
+    `;
+  }).join('');
+
+  return `<svg viewBox="0 0 ${chartW} ${height}" xmlns="http://www.w3.org/2000/svg" role="img">${bars}</svg>`;
+}
+
+function buildReportCharts(dict){
+  const container = document.getElementById('reportCharts');
+
+  // conta apenas trocas de ferramenta (não coletes)
+  const resets = [];
+  tools.forEach(tool => {
+    (tool.history || []).forEach(h => {
+      if(h.type === 'reset') resets.push({ tool, entry: h });
+    });
+  });
+
+  if(resets.length === 0){
+    container.innerHTML = `<div class="chart-empty">${dict.chartNoData}</div>`;
+    return;
+  }
+
+  // 1) trocas por motivo
+  const byReason = {};
+  resets.forEach(({ entry }) => {
+    const key = reasonLabel(entry.reason, dict);
+    byReason[key] = (byReason[key] || 0) + 1;
+  });
+  const reasonData = Object.entries(byReason)
+    .map(([label, value]) => ({ label, value }))
+    .sort((a,b) => b.value - a.value);
+
+  // 2) trocas por ferramenta
+  const byTool = {};
+  resets.forEach(({ tool }) => {
+    const key = tool.name || '—';
+    byTool[key] = (byTool[key] || 0) + 1;
+  });
+  const toolData = Object.entries(byTool)
+    .map(([label, value]) => ({ label, value }))
+    .sort((a,b) => b.value - a.value);
+
+  container.innerHTML = `
+    <div class="chart-block">
+      <p class="chart-title">${dict.chartByReason} — ${dict.chartTotalLabel(resets.length)}</p>
+      ${buildBarChartSvg(reasonData, 12)}
+    </div>
+    <div class="chart-block">
+      <p class="chart-title">${dict.chartByTool} — ${dict.chartTotalLabel(resets.length)}</p>
+      ${buildBarChartSvg(toolData, 15)}
+    </div>
+  `;
+}
+
 document.getElementById('btnReport').addEventListener('click', () => {
   const dict = t();
   const rows = [];
@@ -2363,6 +2461,8 @@ document.getElementById('btnReport').addEventListener('click', () => {
   document.getElementById('reportTitle').textContent = dict.reportTitle;
   document.getElementById('reportMeta').textContent =
     `${dict.reportGenerated}: ${new Date().toLocaleString(currentLang==='pt' ? 'pt-BR' : 'ja-JP')}`;
+
+  buildReportCharts(dict);
 
   const headRow = document.getElementById('reportHeadRow');
   headRow.innerHTML = ['colPart','colTool','colDate','colCondition','colReason','colQty','colUnit','colNote']
