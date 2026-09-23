@@ -1942,7 +1942,7 @@ function renderHistory(){
       line1 = dict.histReset(reasonLabel(h.reason, dict))
         + (condTxt ? ` · ${condTxt}` : '')
         + (holderTxt ? ` · ${holderTxt}` : '');
-      line2 = `${dateStr}${h.note ? ' · ' + escapeHtml(h.note) : ''} · ${fmtNum(h.amount)} ${dict.unitLabel[h.unit] || h.unit}`;
+      line2 = `${dateStr}${h.note ? ' · ' + escapeHtml(h.note) : ''} · ${fmtNum(h.amount)} ${unitLabel}`;
     } else if(h.type === 'collet'){
       line1 = dict.histCollet;
       line2 = `${dateStr} · ${fmtNum(h.amount)} ${h.unit === 'dias' ? (currentLang==='pt' ? 'dias' : '日') : h.unit}`;
@@ -2513,7 +2513,7 @@ document.getElementById('btnReport').addEventListener('click', () => {
           condition: conditionLabel(h.condition, dict),
           reason: reasonLabel(h.reason, dict),
           amount: fmtNum(h.amount),
-          unit: dict.unitLabel[h.unit] || h.unit || '',
+          unit: dict.unitLabel[tool.unit] || tool.unit || '',
           note: h.note || ''
         });
       } else if(h.type === 'collet'){
