@@ -662,6 +662,19 @@ body.printing #reportArea{
   color:#000; margin: 0 0 6px; border-bottom: 1px solid #ccc; padding-bottom: 3px;
 }
 .chart-block svg{ width:100%; height:auto; display:block; }
+.chart-bars{ margin-top: 10px; }
+.chart-legend{
+  display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:8px;
+  font-family: Arial, sans-serif; font-size:10px; color:#333;
+}
+.chart-legend-item{ display:inline-flex; align-items:center; gap:4px; }
+.chart-swatch{
+  width:9px; height:9px; border-radius:2px; display:inline-block; flex:none;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+#reportCharts, #reportCharts *{
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
 .chart-empty{ font-family: Arial, sans-serif; font-size: 10px; color:#666; padding: 6px 0; }
 
 /* ==========================================================
@@ -1178,6 +1191,7 @@ const I18N = {
     chartByReason: "Trocas por motivo",
     chartByTool: "Trocas por ferramenta",
     chartNoData: "Sem trocas registradas para gerar os gráficos.",
+    chartOther: "outras ({n})",
     chartTotalLabel: (n) => `total: ${n}`,
     reportGenerated: "Gerado em",
     reportEmpty: "Nenhuma troca registrada ainda.",
@@ -1310,6 +1324,7 @@ const I18N = {
     chartByReason: "理由別の交換件数",
     chartByTool: "工具別の交換件数",
     chartNoData: "グラフを作成するための交換記録がありません。",
+    chartOther: "その他 ({n}件)",
     chartTotalLabel: (n) => `合計: ${n}件`,
     reportGenerated: "作成日時",
     reportEmpty: "交換履歴はまだありません。",
@@ -2361,78 +2376,128 @@ function render(){
 /* ---------- relatório / PDF (via impressão do navegador) ---------- */
 /* ---------- gráficos do relatório (SVG puro, sem bibliotecas) ---------- */
 
-// gráfico de barras horizontais; data = [{label, value}]
-function buildBarChartSvg(data, maxBars){
-  const rows = data.slice(0, maxBars);
-  const rowH = 22;
-  const gap = 6;
-  const labelW = 190;
-  const chartW = 700;
-  const barAreaW = chartW - labelW - 60;
-  const height = rows.length * (rowH + gap) + 6;
-  const maxVal = Math.max(...rows.map(r => r.value), 1);
+// paleta fixa: a cor acompanha o item, não a posição
+var CHART_COLORS = ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#6250d6','#e34948'];
+var CHART_GRAY   = '#8a8f98';
+var CHART_MAX_ITEMS = 8; // acima disso, o excedente vira "outras"
 
-  const bars = rows.map((r, i) => {
-    const y = i * (rowH + gap);
-    const w = Math.max(2, (r.value / maxVal) * barAreaW);
-    // encurta rótulos muito longos para não invadir a área das barras
-    const label = r.label.length > 28 ? r.label.slice(0, 27) + '…' : r.label;
-    return `
-      <text x="0" y="${y + rowH * 0.7}" font-family="Arial, sans-serif" font-size="11" fill="#000">${escapeHtml(label)}</text>
-      <rect x="${labelW}" y="${y + 3}" width="${w}" height="${rowH - 6}" fill="#4a5568" />
-      <text x="${labelW + w + 6}" y="${y + rowH * 0.7}" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#000">${r.value}</text>
-    `;
-  }).join('');
-
-  return `<svg viewBox="0 0 ${chartW} ${height}" xmlns="http://www.w3.org/2000/svg" role="img">${bars}</svg>`;
+// encurta o nome: corta no primeiro parêntese ou barra (o código do modelo fica na tabela)
+function shortLabel(s){
+  var full = String(s == null ? '' : s).trim();
+  var t = full;
+  var p = t.indexOf('(');
+  if(p > 0) t = t.slice(0, p);
+  var b = t.indexOf(' / ');
+  if(b > 0) t = t.slice(0, b);
+  t = t.trim();
+  if(!t) t = full;
+  return t.length > 24 ? t.slice(0, 23) + '\u2026' : t;
 }
 
-function buildReportCharts(dict){
-  const container = document.getElementById('reportCharts');
+// agrupa o excedente e distribui as cores
+function prepareChartRows(counts, otherLabel){
+  var rows = Object.keys(counts)
+    .map(function(k){ return { label: shortLabel(k), value: counts[k] }; })
+    .sort(function(a,b){ return b.value - a.value; });
 
-  // conta apenas trocas de ferramenta (não coletes)
-  const resets = [];
-  tools.forEach(tool => {
-    (tool.history || []).forEach(h => {
-      if(h.type === 'reset') resets.push({ tool, entry: h });
+  var head = rows.slice(0, CHART_MAX_ITEMS);
+  var tail = rows.slice(CHART_MAX_ITEMS);
+
+  head.forEach(function(r, i){ r.color = CHART_COLORS[i % CHART_COLORS.length]; });
+
+  if(tail.length){
+    var sum = tail.reduce(function(acc, r){ return acc + r.value; }, 0);
+    head.push({ label: otherLabel.replace('{n}', tail.length), value: sum, color: CHART_GRAY, isOther: true });
+  }
+  return head;
+}
+
+// (B) barra única de proporção
+function buildProportionSvg(rows, total){
+  var W = 700, H = 30, gap = 3;
+  var usable = W - gap * (rows.length - 1);
+  var x = 0, out = '';
+  rows.forEach(function(r){
+    var w = Math.max((r.value / total) * usable, 2);
+    out += '<rect x="' + x.toFixed(1) + '" y="0" width="' + w.toFixed(1) + '" height="' + H + '" fill="' + r.color + '"/>';
+    x += w + gap;
+  });
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img">' + out + '</svg>';
+}
+
+// legenda da barra de proporção
+function buildLegendHtml(rows, total){
+  return '<div class="chart-legend">' + rows.map(function(r){
+    var pct = Math.round((r.value / total) * 100);
+    return '<span class="chart-legend-item"><span class="chart-swatch" style="background:' + r.color + '"></span>'
+         + escapeHtml(r.label) + ' ' + r.value + ' \u00b7 ' + pct + '%</span>';
+  }).join('') + '</div>';
+}
+
+// (A) barras detalhadas com valor e percentual
+function buildBarsSvg(rows, total){
+  var rowH = 22, gap = 8, labelW = 178, valueW = 96, chartW = 700;
+  var barArea = chartW - labelW - valueW;
+  var height = rows.length * (rowH + gap);
+  var maxVal = Math.max.apply(null, rows.map(function(r){ return r.value; }).concat([1]));
+
+  var body = rows.map(function(r, i){
+    var y = i * (rowH + gap);
+    var w = Math.max((r.value / maxVal) * barArea, 3);
+    var pct = Math.round((r.value / total) * 100);
+    return '<text x="0" y="' + (y + rowH * 0.72) + '" font-family="Arial, sans-serif" font-size="11.5" fill="#000">' + escapeHtml(r.label) + '</text>'
+         + '<rect x="' + labelW + '" y="' + (y + 3) + '" width="' + w.toFixed(1) + '" height="' + (rowH - 6) + '" rx="3" fill="' + r.color + '"/>'
+         + '<text x="' + (labelW + w + 8) + '" y="' + (y + rowH * 0.72) + '" font-family="Arial, sans-serif" font-size="11.5" font-weight="bold" fill="#000">' + r.value + ' \u00b7 ' + pct + '%</text>';
+  }).join('');
+
+  return '<svg viewBox="0 0 ' + chartW + ' ' + height + '" xmlns="http://www.w3.org/2000/svg" role="img">' + body + '</svg>';
+}
+
+// monta um bloco completo: proporção + legenda + barras
+function buildChartBlock(title, rows, total){
+  return '<div class="chart-block">'
+       + '<p class="chart-title">' + title + '</p>'
+       + buildProportionSvg(rows, total)
+       + buildLegendHtml(rows, total)
+       + '<div class="chart-bars">' + buildBarsSvg(rows, total) + '</div>'
+       + '</div>';
+}
+
+// coleta os dados e desenha os dois gráficos
+function renderReportCharts(toolList, dict){
+  var container = document.getElementById('reportCharts');
+
+  var resets = [];
+  toolList.forEach(function(tool){
+    (tool.history || []).forEach(function(h){
+      if(h.type === 'reset') resets.push({ tool: tool, entry: h });
     });
   });
 
   if(resets.length === 0){
-    container.innerHTML = `<div class="chart-empty">${dict.chartNoData}</div>`;
+    container.innerHTML = '<div class="chart-empty">' + dict.chartNoData + '</div>';
     return;
   }
 
-  // 1) trocas por motivo
-  const byReason = {};
-  resets.forEach(({ entry }) => {
-    const key = reasonLabel(entry.reason, dict);
-    byReason[key] = (byReason[key] || 0) + 1;
-  });
-  const reasonData = Object.entries(byReason)
-    .map(([label, value]) => ({ label, value }))
-    .sort((a,b) => b.value - a.value);
+  var total = resets.length;
 
-  // 2) trocas por ferramenta
-  const byTool = {};
-  resets.forEach(({ tool }) => {
-    const key = tool.name || '—';
-    byTool[key] = (byTool[key] || 0) + 1;
+  var byReason = {};
+  resets.forEach(function(r){
+    var k = reasonLabel(r.entry.reason, dict);
+    byReason[k] = (byReason[k] || 0) + 1;
   });
-  const toolData = Object.entries(byTool)
-    .map(([label, value]) => ({ label, value }))
-    .sort((a,b) => b.value - a.value);
 
-  container.innerHTML = `
-    <div class="chart-block">
-      <p class="chart-title">${dict.chartByReason} — ${dict.chartTotalLabel(resets.length)}</p>
-      ${buildBarChartSvg(reasonData, 12)}
-    </div>
-    <div class="chart-block">
-      <p class="chart-title">${dict.chartByTool} — ${dict.chartTotalLabel(resets.length)}</p>
-      ${buildBarChartSvg(toolData, 15)}
-    </div>
-  `;
+  var byTool = {};
+  resets.forEach(function(r){
+    var k = r.tool.name || '\u2014';
+    byTool[k] = (byTool[k] || 0) + 1;
+  });
+
+  container.innerHTML =
+      buildChartBlock(dict.chartByReason + ' \u2014 ' + dict.chartTotalLabel(total),
+                      prepareChartRows(byReason, dict.chartOther), total)
+    + buildChartBlock(dict.chartByTool + ' \u2014 ' + dict.chartTotalLabel(total),
+                      prepareChartRows(byTool, dict.chartOther), total);
 }
 
 document.getElementById('btnReport').addEventListener('click', () => {
@@ -2471,7 +2536,7 @@ document.getElementById('btnReport').addEventListener('click', () => {
   document.getElementById('reportMeta').textContent =
     `${dict.reportGenerated}: ${new Date().toLocaleString(currentLang==='pt' ? 'pt-BR' : 'ja-JP')}`;
 
-  buildReportCharts(dict);
+  renderReportCharts(tools, dict);
 
   const headRow = document.getElementById('reportHeadRow');
   headRow.innerHTML = ['colPart','colTool','colDate','colCondition','colReason','colQty','colUnit','colNote']
