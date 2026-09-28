@@ -198,7 +198,6 @@ header p{ margin: 2px 0 0; color: var(--muted); font-size: 10.5px; }
   text-align: left;
 }
 .field textarea{ resize: vertical; min-height: 50px; }
-.field-hint{ font-size: 11px; color: var(--muted); margin: 5px 2px 0; line-height: 1.4; }
 .field input:focus, .field select:focus, .field textarea:focus{ border-color: var(--blue); }
 .formrow{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .formrow > .field{ min-width: 0; }
@@ -867,11 +866,6 @@ body.printing #reportArea{
       <input type="datetime-local" id="r-datetime">
     </div>
     <div class="field">
-      <label data-i18n="fieldReadingReset">Leitura do contador neste momento (opcional)</label>
-      <input type="number" step="0.1" id="r-reading" placeholder="">
-      <p class="field-hint" data-i18n="readingResetHint">Preencha se ainda não registrou a leitura de hoje para esta ferramenta. Deixe em branco se já lançou.</p>
-    </div>
-    <div class="field">
       <label data-i18n="fieldCondition">Condição da ferramenta instalada</label>
       <select id="r-condition">
         <option value="new" data-i18n-opt="conditionNew">Nova (新品)</option>
@@ -935,13 +929,6 @@ body.printing #reportArea{
       <div class="field">
         <label data-i18n="fieldUsed">Valor acumulado atual</label>
         <input type="number" id="e-used" step="0.1">
-      </div>
-    </div>
-    <div class="formrow">
-      <div class="field">
-        <label data-i18n="fieldLastReading">Última leitura do contador registrada</label>
-        <input type="number" id="e-lastreading" step="0.1" placeholder="">
-        <p class="field-hint" data-i18n="fieldLastReadingHint">Deixe em branco se ainda não houve nenhuma leitura registrada para esta ferramenta.</p>
       </div>
     </div>
 
@@ -1110,19 +1097,14 @@ const I18N = {
     emptyFiltered: "Nenhuma ferramenta cadastrada para esta peça.",
     statusOk: "OK", statusWarn: "Atenção", statusDanger: "Trocar agora",
     used: "usado", of: "de",
-    addPlaceholder: "leitura atual",
+    addPlaceholder: "qtd.",
     btnAdd: "+ Registrar",
-    firstReadingSaved: (v) => `Leitura inicial (${v}) registrada. A produção será calculada a partir da próxima leitura.`,
-    noProductionSinceLastReading: "Leitura igual à anterior — nenhuma produção a registrar.",
-    readingLessThanLastConfirm: "Essa leitura é menor que a última registrada. O contador reiniciou? Confirme para tratar como um novo ponto de partida (sem somar produção deste lançamento).",
     btnReset: "Trocar",
     btnEdit: "Editar",
     btnHistory: "Histórico",
     btnDelete: "Excluir ferramenta",
     btnClose: "Fechar",
     fieldUsed: "Valor acumulado atual",
-    fieldLastReading: "Última leitura do contador registrada",
-    fieldLastReadingHint: "Deixe em branco se ainda não houve nenhuma leitura registrada para esta ferramenta.",
     modalEditTitle: "Editar ferramenta",
     modalEditSub: "Corrija dados cadastrados incorretamente.",
     modalHistTitle: "Histórico de lançamentos",
@@ -1174,9 +1156,6 @@ const I18N = {
     reportCloseBtn: "✕ Fechar",
     modalResetTitle: "Registrar troca de ferramenta",
     fieldDateTimeReset: "Data e hora da troca",
-    fieldReadingReset: "Leitura do contador neste momento (opcional)",
-    readingResetPlaceholder: "leitura no momento da troca",
-    readingResetHint: "Preencha se ainda não registrou a leitura de hoje para esta ferramenta. Deixe em branco se já lançou.",
     fieldDateTime: "Data e hora",
     editDateTime: "Data/hora",
     modalEditDateTitle: "Corrigir data e hora",
@@ -1251,19 +1230,14 @@ const I18N = {
     emptyFiltered: "この製品モデル用の工具はまだ登録されていません。",
     statusOk: "OK", statusWarn: "注意", statusDanger: "今すぐ交換",
     used: "使用済み", of: "/",
-    addPlaceholder: "現在の数値",
+    addPlaceholder: "数量",
     btnAdd: "+ 記録",
-    firstReadingSaved: (v) => `初回の数値(${v})を記録しました。次回の入力から生産量を自動計算します。`,
-    noProductionSinceLastReading: "前回と同じ数値です — 生産量はありません。",
-    readingLessThanLastConfirm: "前回より小さい数値です。カウンターがリセットされましたか?OKで新しい開始点として記録します(今回は生産量に加算しません)。",
     btnReset: "交換",
     btnEdit: "編集",
     btnHistory: "履歴",
     btnDelete: "工具を削除",
     btnClose: "閉じる",
     fieldUsed: "現在の累積使用量",
-    fieldLastReading: "登録済みの最終カウンター数値",
-    fieldLastReadingHint: "このツールでまだ数値を記録していない場合は空欄のままにしてください。",
     modalEditTitle: "工具を編集",
     modalEditSub: "誤って登録した情報を修正します。",
     modalHistTitle: "記録履歴",
@@ -1315,9 +1289,6 @@ const I18N = {
     reportCloseBtn: "✕ 閉じる",
     modalResetTitle: "工具交換を記録",
     fieldDateTimeReset: "交換日時",
-    fieldReadingReset: "この時点でのカウンターの数値(任意)",
-    readingResetPlaceholder: "交換時点の数値",
-    readingResetHint: "本日分の数値をまだ入力していない場合に記入してください。既に入力済みなら空欄のままで構いません。",
     fieldDateTime: "日時",
     editDateTime: "日時",
     modalEditDateTitle: "日時を修正",
@@ -1583,36 +1554,6 @@ function isoToDatetimeLocalValue(iso){
   return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
 
-/* ---------- leitura do contador ----------
-   Em vez do usuário calcular "leitura nova − leitura anterior" de cabeça, ele digita
-   a leitura crua do contador e o app compara com tool.lastReading (a última leitura
-   salva desta ferramenta) para descobrir sozinho quanto foi produzido no intervalo.
-   status: 'invalid' | 'cancelled' | 'baseline' (primeira leitura, só define o ponto de
-   partida) | 'noop' (leitura igual à anterior, nada a somar) | 'applied' (somou delta) */
-function applyReading(tool, readingValue, entryDate){
-  const dict = t();
-  if(isNaN(readingValue) || readingValue < 0){
-    return { status: 'invalid' };
-  }
-  if(tool.lastReading == null){
-    tool.lastReading = readingValue;
-    return { status: 'baseline' };
-  }
-  const delta = readingValue - tool.lastReading;
-  if(delta < 0){
-    if(!confirm(dict.readingLessThanLastConfirm)) return { status: 'cancelled' };
-    tool.lastReading = readingValue;
-    return { status: 'baseline' };
-  }
-  if(delta === 0){
-    return { status: 'noop' };
-  }
-  tool.used += delta;
-  tool.history.push({ type: 'add', date: entryDate, amount: delta, unit: tool.unit, reading: readingValue });
-  tool.lastReading = readingValue;
-  return { status: 'applied', delta };
-}
-
 document.getElementById('saveForm').addEventListener('click', () => {
   const name = document.getElementById('f-name').value.trim();
   const partmodel = document.getElementById('f-partmodel').value.trim();
@@ -1640,7 +1581,6 @@ document.getElementById('saveForm').addEventListener('click', () => {
     order: tools.length,
     alertPct: Math.min(99, Math.max(1, alertPct)),
     used: 0,
-    lastReading: null,
     lastChange: null,
     holder: holder || null,
     collet: colletEnabled ? {
@@ -1824,8 +1764,6 @@ function openResetModal(toolId){
   document.getElementById('resetModalSub').textContent =
     dict.resetModalSub(tool.name, fmtNum(tool.used), dict.unitLabel[tool.unit] || tool.unit);
   document.getElementById('r-datetime').value = nowDatetimeLocalValue();
-  document.getElementById('r-reading').value = '';
-  document.getElementById('r-reading').placeholder = dict.readingResetPlaceholder;
   document.getElementById('r-condition').selectedIndex = 0;
   document.getElementById('r-reason').value = '';
   document.getElementById('r-reason').placeholder = dict.reasonPlaceholder;
@@ -1863,18 +1801,6 @@ document.getElementById('confirmReset').addEventListener('click', () => {
 
   const chosenDate = new Date(datetimeVal).toISOString();
 
-  const readingVal = document.getElementById('r-reading').value;
-  if(readingVal !== ''){
-    const readingNum = parseFloat(readingVal);
-    const result = applyReading(tool, readingNum, chosenDate);
-    if(result.status === 'invalid'){
-      alert(t().fillRequiredAmount);
-      return;
-    }
-    if(result.status === 'cancelled') return;
-    // 'baseline' e 'noop' não precisam de aviso aqui: a troca segue normalmente com tool.used já correto
-  }
-
   tool.history.push({
     type: 'reset',
     date: chosenDate,
@@ -1892,7 +1818,6 @@ document.getElementById('confirmReset').addEventListener('click', () => {
 
   document.getElementById('r-note').value = '';
   document.getElementById('r-reason').value = '';
-  document.getElementById('r-reading').value = '';
   document.getElementById('r-condition').selectedIndex = 0;
   resetOverlay.classList.remove('open');
   pendingResetToolId = null;
@@ -1915,7 +1840,6 @@ function openEditModal(toolId){
   document.getElementById('e-maxlife').value = tool.maxlife;
   document.getElementById('e-alert').value = tool.alertPct;
   document.getElementById('e-used').value = tool.used;
-  document.getElementById('e-lastreading').value = tool.lastReading == null ? '' : tool.lastReading;
   buildHolderGrid('e-holder-grid', tool.holder || null);
   const collet = tool.collet || { enabled:false };
   document.getElementById('e-collet-enabled').checked = !!collet.enabled;
@@ -1943,8 +1867,6 @@ document.getElementById('confirmEdit').addEventListener('click', () => {
   const maxlife = parseFloat(document.getElementById('e-maxlife').value);
   const alertPct = parseFloat(document.getElementById('e-alert').value) || 80;
   const used = parseFloat(document.getElementById('e-used').value);
-  const lastReadingRaw = document.getElementById('e-lastreading').value;
-  const lastReading = lastReadingRaw === '' ? null : parseFloat(lastReadingRaw);
   const holder = getSelectedHolder('e-holder-grid');
   const colletEnabled = document.getElementById('e-collet-enabled').checked;
   const colletModel = document.getElementById('e-collet-model').value.trim();
@@ -1953,10 +1875,6 @@ document.getElementById('confirmEdit').addEventListener('click', () => {
 
   if(!name || !partmodel || isNaN(maxlife) || maxlife <= 0 || isNaN(used) || used < 0){
     alert(t().fillRequired);
-    return;
-  }
-  if(lastReadingRaw !== '' && (isNaN(lastReading) || lastReading < 0)){
-    alert(t().fillRequiredAmount);
     return;
   }
   if(colletEnabled && (isNaN(colletInterval) || colletInterval <= 0)){
@@ -1970,7 +1888,6 @@ document.getElementById('confirmEdit').addEventListener('click', () => {
   tool.maxlife = maxlife;
   tool.alertPct = Math.min(99, Math.max(1, alertPct));
   tool.used = used;
-  tool.lastReading = lastReading;
   tool.holder = holder || null;
   tool.collet = colletEnabled ? {
     enabled: true,
@@ -2063,15 +1980,6 @@ function renderHistory(){
 
       if(entry.type === 'add'){
         tool.used = Math.max(0, tool.used - entry.amount);
-        // se este lançamento tinha uma leitura de contador associada, e for o mais
-        // recente com leitura, volta tool.lastReading para o valor anterior a ele
-        if(entry.reading != null){
-          const stillHasNewerReading = tool.history.some((h, i) =>
-            i !== idx && h.type === 'add' && h.reading != null && new Date(h.date) > new Date(entry.date));
-          if(!stillHasNewerReading){
-            tool.lastReading = entry.reading - entry.amount;
-          }
-        }
       }
       tool.history.splice(idx, 1);
       saveTools();
@@ -2374,19 +2282,14 @@ function render(){
       const id = btn.getAttribute('data-add-btn');
       const input = listEl.querySelector(`[data-add-input="${id}"]`);
       const val = parseFloat(input.value);
-      if(isNaN(val) || val < 0) return;
+      if(isNaN(val) || val <= 0) return;
       const tool = tools.find(x => x.id === id);
       const dtInput = listEl.querySelector(`[data-add-datetime="${id}"]`);
       const dtRow = listEl.querySelector(`[data-datetime-row="${id}"]`);
       const useCustomDate = dtRow && !dtRow.classList.contains('hidden') && dtInput.value;
       const entryDate = useCustomDate ? new Date(dtInput.value).toISOString() : new Date().toISOString();
-      const result = applyReading(tool, val, entryDate);
-      if(result.status === 'invalid' || result.status === 'cancelled') return;
-      if(result.status === 'baseline'){
-        alert(t().firstReadingSaved(fmtNum(val)));
-      } else if(result.status === 'noop'){
-        alert(t().noProductionSinceLastReading);
-      }
+      tool.used += val;
+      tool.history.push({ type: 'add', date: entryDate, amount: val, unit: tool.unit });
       input.value = '';
       saveTools();
       render();
