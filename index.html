@@ -1922,9 +1922,11 @@ function renderHistory(){
 
   document.getElementById('histModalSub').textContent = dict.histModalSub(tool.name);
 
+   // compara por minuto; no mesmo minuto, o registrado por último aparece em cima
+  const minuteOf = (iso) => Math.floor(new Date(iso).getTime() / 60000);
   const entries = [...(tool.history || [])]
     .map((h, idx) => ({...h, idx}))
-    .sort((a,b) => new Date(b.date) - new Date(a.date));
+    .sort((a,b) => (minuteOf(b.date) - minuteOf(a.date)) || (b.idx - a.idx));
 
   if(entries.length === 0){
     listEl.innerHTML = `<div class="hist-empty">${dict.histEmpty}</div>`;
