@@ -191,6 +191,14 @@ header p{ margin: 2px 0 0; color: var(--muted); font-size: 10.5px; }
 .batch-item .n{ font-size: 13px; font-weight:600; color: var(--text); word-break: break-word; }
 .batch-item .m{ font-size: 11px; color: var(--muted); margin-top: 2px; }
 .batch-item.checked{ background: rgba(255,177,0,0.06); }
+.add-btn.copy{
+  border-style: solid;
+  border-color: rgba(165,139,255,0.45);
+  color: #c4b3ff;
+  margin-bottom: 10px;
+}
+.batch-item.disabled{ opacity: 0.45; cursor: default; }
+.batch-item .exists{ color: var(--amber); font-weight:700; }
 .batch-count{
   font-size: 12px; color: var(--amber); text-align:center; margin: 10px 0 0; font-weight:600;
 }
@@ -844,6 +852,7 @@ body.printing #reportArea{
   </div>
 
   <button class="add-btn batch" id="btnBatch" data-i18n="batchBtn">⚡ Registrar em várias ferramentas</button>
+  <button class="add-btn copy" id="btnCopyTools" style="display:none;"></button>
   <button class="add-btn" id="toggleForm" data-i18n="addToolBtn">+ Nova ferramenta</button>
 
   <div class="form-card" id="formCard">
@@ -1099,6 +1108,24 @@ body.printing #reportArea{
   </div>
 </div>
 
+<!-- modal: copiar ferramentas para a outra máquina -->
+<div class="overlay" id="copyOverlay">
+  <div class="modal">
+    <p class="card-title" id="copyTitle">—</p>
+    <p class="modal-sub" id="copySub">—</p>
+    <div class="batch-toolbar">
+      <button class="batch-sel-btn" id="c-selectAll" data-i18n="btnSelectAll">Marcar todas</button>
+      <button class="batch-sel-btn" id="c-selectNone" data-i18n="btnSelectNone">Desmarcar todas</button>
+    </div>
+    <div class="batch-list" id="copyList"></div>
+    <p class="batch-count" id="copyCount"></p>
+    <div class="form-actions">
+      <button class="btn ghost" id="cancelCopy" data-i18n="btnCancel">Cancelar</button>
+      <button class="btn primary" id="confirmCopy" data-i18n="btnConfirmCopy">Copiar</button>
+    </div>
+  </div>
+</div>
+
 <!-- modal: editar um lançamento (data/hora, condição, motivo, observação) -->
 <div class="overlay" id="editDateOverlay">
   <div class="modal">
@@ -1312,6 +1339,13 @@ const I18N = {
     reportScopeLabel: "Máquina:",
     reportAll: "Todas",
     reportScopeAll: "todas as máquinas",
+    copyBtn: (to) => `⇄ Copiar ferramentas para ${to}`,
+    copyTitle: (to) => `Copiar ferramentas para ${to}`,
+    copySub: (from, to) => `Cria cartões novos em ${to} com os mesmos dados das ferramentas de ${from}. O uso e o histórico começam do zero.`,
+    copyExists: "já existe",
+    btnConfirmCopy: "Copiar",
+    copyNoneSelected: "Marque pelo menos uma ferramenta.",
+    copyDone: (n, to) => `${n} ${n === 1 ? 'ferramenta copiada' : 'ferramentas copiadas'} para ${to}.`,
   },
   ja: {
     title: "工具管理",
@@ -1461,6 +1495,13 @@ const I18N = {
     reportScopeLabel: "機械:",
     reportAll: "すべて",
     reportScopeAll: "全機械",
+    copyBtn: (to) => `⇄ ${to}に工具をコピー`,
+    copyTitle: (to) => `${to}に工具をコピー`,
+    copySub: (from, to) => `${from}の工具と同じ内容で${to}に新しいカードを作成します。使用量と履歴はゼロから始まります。`,
+    copyExists: "登録済み",
+    btnConfirmCopy: "コピー",
+    copyNoneSelected: "工具を1つ以上選択してください。",
+    copyDone: (n, to) => `${n}件の工具を${to}にコピーしました。`,
   }
 };
 
@@ -1894,6 +1935,87 @@ document.getElementById('confirmBatch').addEventListener('click', () => {
   saveTools();
   render();
   alert(dict.batchDone(selectedIds.length, fmtNum(amount)));
+});
+
+/* ---------- modal: copiar ferramentas para a outra máquina ---------- */
+const copyOverlay = document.getElementById('copyOverlay');
+const normName = (n) => String(n || '').trim().toLowerCase();
+
+function openCopyModal(){
+  const d = t();
+  const from = activeMachine, to = otherMachine(activeMachine);
+  document.getElementById('copyTitle').textContent = d.copyTitle(machineName(to));
+  document.getElementById('copySub').textContent = d.copySub(machineName(from), machineName(to));
+  const existing = new Set(tools.filter(x => toolMachine(x) === to).map(x => normName(x.name)));
+  const source = tools.filter(x => toolMachine(x) === from)
+    .sort((a,b) => (a.order ?? 0) - (b.order ?? 0));
+  const listEl = document.getElementById('copyList');
+  listEl.innerHTML = source.map(tool => {
+    const dup = existing.has(normName(tool.name));
+    const meta = [tool.partmodel, tool.holder].filter(Boolean).join(' · ');
+    return `
+      <label class="batch-item${dup ? ' disabled' : ''}">
+        <input type="checkbox" data-copy-check="${tool.id}"${dup ? ' disabled' : ''}>
+        <span class="info">
+          <span class="n">${escapeHtml(tool.name)}</span>
+          <span class="m">${escapeHtml(meta)}${dup ? ` — <span class="exists">${d.copyExists}</span>` : ''}</span>
+        </span>
+      </label>`;
+  }).join('');
+  listEl.querySelectorAll('[data-copy-check]').forEach(chk => {
+    chk.addEventListener('change', () => {
+      chk.closest('.batch-item').classList.toggle('checked', chk.checked);
+      updateCopyCount();
+    });
+  });
+  updateCopyCount();
+  copyOverlay.classList.add('open');
+}
+function updateCopyCount(){
+  const n = document.querySelectorAll('#copyList [data-copy-check]:checked').length;
+  document.getElementById('copyCount').textContent = t().batchCount(n);
+}
+function setAllCopy(on){
+  document.querySelectorAll('#copyList [data-copy-check]:not(:disabled)').forEach(chk => {
+    chk.checked = on;
+    chk.closest('.batch-item').classList.toggle('checked', on);
+  });
+  updateCopyCount();
+}
+document.getElementById('btnCopyTools').addEventListener('click', openCopyModal);
+document.getElementById('c-selectAll').addEventListener('click', () => setAllCopy(true));
+document.getElementById('c-selectNone').addEventListener('click', () => setAllCopy(false));
+document.getElementById('cancelCopy').addEventListener('click', () => copyOverlay.classList.remove('open'));
+document.getElementById('confirmCopy').addEventListener('click', () => {
+  const d = t();
+  const to = otherMachine(activeMachine);
+  const ids = [...document.querySelectorAll('#copyList [data-copy-check]:checked')]
+    .map(chk => chk.getAttribute('data-copy-check'));
+  if(ids.length === 0){ alert(d.copyNoneSelected); return; }
+  const stamp = Date.now();
+  ids.forEach((id, i) => {
+    const src = tools.find(x => x.id === id);
+    if(!src) return;
+    tools.push({
+      id: 't' + stamp + '_' + i,
+      machine: to,
+      name: src.name,
+      partmodel: src.partmodel,
+      unit: src.unit,
+      maxlife: src.maxlife,
+      order: tools.length,
+      alertPct: src.alertPct,
+      used: 0,
+      lastChange: null,
+      holder: src.holder || null,
+      collet: src.collet ? { ...src.collet } : { enabled: false, model: null, intervalDays: null, lastChange: null },
+      history: []
+    });
+  });
+  copyOverlay.classList.remove('open');
+  saveTools();
+  render();
+  alert(d.copyDone(ids.length, machineName(to)));
 });
 
 /* ---------- modal: motivo da troca ---------- */
@@ -2389,6 +2511,9 @@ function render(){
   renderMachineTabs();
   if(formCard.classList.contains('open')) refreshFormMachine();
   const machineTools = tools.filter(x => toolMachine(x) === activeMachine);
+  const copyBtn = document.getElementById('btnCopyTools');
+  copyBtn.textContent = dict.copyBtn(machineName(otherMachine(activeMachine)));
+  copyBtn.style.display = machineTools.length > 0 ? 'block' : 'none';
   const listEl = document.getElementById('toolList');
   const filterBar = document.getElementById('filterBar');
   const filterSelect = document.getElementById('filterPart');
