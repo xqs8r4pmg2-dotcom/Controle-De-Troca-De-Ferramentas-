@@ -71,6 +71,43 @@ header p{ margin: 2px 0 0; color: var(--muted); font-size: 10.5px; }
 }
 .langswitch button.active{ background: var(--amber); color: #1a1a1a; }
 
+/* ---- abas de máquina ---- */
+.machine-bar{ display:flex; gap:8px; margin-bottom: 14px; }
+.machine-tabs{
+  flex:1; display:grid; grid-template-columns: 1fr 1fr; gap:6px;
+  padding:5px; background:#0d0f11; border:1px solid var(--line); border-radius:10px;
+}
+.machine-tab{
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  min-height: 48px; padding: 8px 10px;
+  background: var(--panel); color: var(--muted);
+  border: 1px solid var(--line); border-radius: 8px;
+  font-family:'Oswald','Noto Sans JP',sans-serif; font-size: 18px; font-weight:700; letter-spacing:0.5px;
+  cursor:pointer;
+}
+.machine-tab .dot{ width:12px; height:12px; border-radius:50%; flex:none; }
+.machine-tab.active{ color:#141414; }
+.machine-tab.active .dot{ background:#141414 !important; }
+.machine-rename{
+  flex:0 0 auto; width:48px;
+  background: var(--panel); color: var(--muted);
+  border:1px solid var(--line); border-radius:10px;
+  font-size:18px; cursor:pointer;
+}
+.machine-badge{
+  display:inline-block; font-size:10.5px; font-weight:700; color:#141414;
+  border-radius:5px; padding:2px 7px; margin-top:4px;
+}
+.badge-row{ display:flex; gap:6px; flex-wrap:wrap; }
+.form-machine{
+  display:flex; align-items:center; gap:10px;
+  font-size:12px; color: var(--muted);
+  padding: 10px 12px; margin: 0 0 12px;
+  background:#0d0f11; border-radius:8px; border:1px solid var(--line);
+}
+.form-machine b{ color: var(--text); font-size: 14px; }
+.form-machine .dot{ width:12px; height:12px; border-radius:50%; flex:none; }
+
 /* ---- barra de ações utilitárias ---- */
 .util-bar{
   display:grid;
@@ -280,6 +317,8 @@ header p{ margin: 2px 0 0; color: var(--muted); font-size: 10.5px; }
   font-size: 12px; padding: 4px 0;
 }
 .accessory-row .k{ color: var(--muted); }
+/* holder: rótulo e valor juntos, à direita */
+.accessory-row.holder-row{ justify-content:flex-end; gap:6px; }
 .accessory-row .v{ color: var(--text); font-weight:600; }
 
 /* bloco do colete: rótulo/modelo em cima, status + botão embaixo (não quebra mais no meio) */
@@ -751,14 +790,22 @@ body.printing #reportArea{
 }
 
 /* larguras fixas por coluna, somando 100%, pra nunca ultrapassar a página */
-#reportArea th:nth-child(1), #reportArea td:nth-child(1){ width: 13%; } /* peça */
-#reportArea th:nth-child(2), #reportArea td:nth-child(2){ width: 14%; } /* ferramenta */
-#reportArea th:nth-child(3), #reportArea td:nth-child(3){ width: 10%; } /* data */
-#reportArea th:nth-child(4), #reportArea td:nth-child(4){ width: 11%; } /* condição instalada */
-#reportArea th:nth-child(5), #reportArea td:nth-child(5){ width: 13%; } /* motivo */
-#reportArea th:nth-child(6), #reportArea td:nth-child(6){ width: 10%; } /* quantidade */
-#reportArea th:nth-child(7), #reportArea td:nth-child(7){ width: 9%; } /* unidade */
-#reportArea th:nth-child(8), #reportArea td:nth-child(8){ width: 20%; } /* observação */
+#reportArea th:nth-child(1), #reportArea td:nth-child(1){ width: 7%; } /* máquina */
+#reportArea th:nth-child(2), #reportArea td:nth-child(2){ width: 12%; } /* peça */
+#reportArea th:nth-child(3), #reportArea td:nth-child(3){ width: 14%; } /* ferramenta */
+#reportArea th:nth-child(4), #reportArea td:nth-child(4){ width: 9%; } /* data */
+#reportArea th:nth-child(5), #reportArea td:nth-child(5){ width: 10%; } /* condição instalada */
+#reportArea th:nth-child(6), #reportArea td:nth-child(6){ width: 12%; } /* motivo */
+#reportArea th:nth-child(7), #reportArea td:nth-child(7){ width: 9%; } /* quantidade */
+#reportArea th:nth-child(8), #reportArea td:nth-child(8){ width: 7%; } /* unidade */
+#reportArea th:nth-child(9), #reportArea td:nth-child(9){ width: 20%; } /* observação */
+.report-scope{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-bottom: 12px; font-family: Arial, sans-serif; }
+.report-scope span{ font-size: 12px; font-weight:700; color:#333; margin-right:4px; }
+.report-scope button{
+  padding: 9px 14px; border-radius: 6px; border:1px solid #999; background:#fff; color:#333;
+  font-family: 'IBM Plex Mono','Noto Sans JP',sans-serif; font-size: 12px; font-weight:700; cursor:pointer;
+}
+.report-scope button.active{ background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
 
 @media print{
   @page{ size: auto; margin: 8mm; }
@@ -784,6 +831,11 @@ body.printing #reportArea{
     </div>
   </header>
 
+  <div class="machine-bar">
+    <div class="machine-tabs" id="machineTabs"></div>
+    <button class="machine-rename" id="btnRenameMachine" aria-label="Renomear máquina">✎</button>
+  </div>
+
   <div class="util-bar">
     <button class="util-btn" id="btnBackup" data-i18n="backupBtn">⬇ Backup</button>
     <button class="util-btn" id="btnRestore" data-i18n="restoreBtn">⬆ Restaurar</button>
@@ -796,6 +848,7 @@ body.printing #reportArea{
 
   <div class="form-card" id="formCard">
     <p class="card-title" data-i18n="formTitle">Cadastrar ferramenta</p>
+    <div class="form-machine" id="formMachine"></div>
     <div class="field">
       <label data-i18n="fieldName">Nome / código da ferramenta</label>
       <input type="text" id="f-name" placeholder="Ex: Broca ⌀6 60°">
@@ -852,6 +905,11 @@ body.printing #reportArea{
         </div>
       </div>
     </div>
+
+    <label class="checkrow" style="margin-top:14px;">
+      <input type="checkbox" id="f-copy-other">
+      <span id="f-copy-label"></span>
+    </label>
 
     <div class="form-actions">
       <button class="btn ghost" id="cancelForm" data-i18n="btnCancel">Cancelar</button>
@@ -934,6 +992,10 @@ body.printing #reportArea{
       <input type="text" id="e-name">
     </div>
     <div class="field">
+      <label data-i18n="fieldMachine">Máquina</label>
+      <select id="e-machine"></select>
+    </div>
+    <div class="field">
       <label data-i18n="fieldPartModel">Modelo da peça</label>
       <input type="text" id="e-partmodel" list="partmodel-list">
     </div>
@@ -1013,7 +1075,7 @@ body.printing #reportArea{
 <div class="overlay" id="batchOverlay">
   <div class="modal">
     <p class="card-title" data-i18n="modalBatchTitle">Registrar em várias ferramentas</p>
-    <p class="modal-sub" data-i18n="modalBatchSub">Marque as ferramentas que rodaram e informe a quantidade uma única vez.</p>
+    <p class="modal-sub" id="batchSub" data-i18n="modalBatchSub">Marque as ferramentas que rodaram e informe a quantidade uma única vez.</p>
     <div class="formrow">
       <div class="field">
         <label data-i18n="fieldQuantity">Quantidade registrada</label>
@@ -1088,6 +1150,7 @@ body.printing #reportArea{
     <button id="reportPrintBtn" data-i18n="reportPrintBtn">🖨 Imprimir / Salvar PDF</button>
     <button id="reportCloseBtn" data-i18n="reportCloseBtn">✕ Fechar</button>
   </div>
+  <div class="report-scope no-print" id="reportScope"></div>
   <h2 id="reportTitle">Relatório de Trocas de Ferramentas</h2>
   <div class="meta" id="reportMeta"></div>
   <div id="reportCharts"></div>
@@ -1239,6 +1302,16 @@ const I18N = {
     colQty: "Ciclo / Quantidade na Troca",
     colUnit: "Unidade",
     colNote: "Observação",
+    colMachine: "Máquina",
+    fieldMachine: "Máquina",
+    renameMachinePrompt: (name) => `Novo nome para a máquina "${name}":`,
+    formMachine: (name) => `Será cadastrada em`,
+    copyToOther: (name) => `Copiar também para ${name} (cartão separado, com contador e histórico próprios)`,
+    emptyMachine: (name) => `Nenhuma ferramenta cadastrada em ${name}.\nToque em "+ Nova ferramenta" para começar.`,
+    batchSubMachine: (name) => `${name} — marque as ferramentas que rodaram e informe a quantidade uma única vez.`,
+    reportScopeLabel: "Máquina:",
+    reportAll: "Todas",
+    reportScopeAll: "todas as máquinas",
   },
   ja: {
     title: "工具管理",
@@ -1378,6 +1451,16 @@ const I18N = {
     colQty: "交換時の数量/サイクル",
     colUnit: "単位",
     colNote: "備考",
+    colMachine: "機械",
+    fieldMachine: "機械",
+    renameMachinePrompt: (name) => `「${name}」の新しい名前:`,
+    formMachine: (name) => `登録先`,
+    copyToOther: (name) => `${name}にもコピーする(カウンターと履歴は別々)`,
+    emptyMachine: (name) => `${name}に登録された工具はまだありません。\n「+ 新しい工具」をタップして開始してください。`,
+    batchSubMachine: (name) => `${name} — 稼働した工具にチェックを入れ、数量を一度だけ入力してください。`,
+    reportScopeLabel: "機械:",
+    reportAll: "すべて",
+    reportScopeAll: "全機械",
   }
 };
 
@@ -1387,6 +1470,32 @@ let sortMode = 'auto';           // 'auto' = por desgaste · 'manual' = ordem de
 let searchTerm = '';
 const STORAGE_KEY = 'ferramentas_tools_v1';
 const SORTMODE_KEY = 'ferramentas_sortmode_v1';
+const MACHINES_KEY = 'ferramentas_machines_v1';
+const ACTIVE_MACHINE_KEY = 'ferramentas_activemachine_v1';
+// código interno fixo (A/B); o nome é só a etiqueta e pode ser renomeado
+const MACHINE_COLORS = { A: '#a58bff', B: '#ff7a45' };
+const DEFAULT_MACHINES = [ { id: 'A', name: 'MC 5' }, { id: 'B', name: 'MC 7' } ];
+let machines = DEFAULT_MACHINES.map(m => ({...m}));
+let activeMachine = 'A';
+let reportScope = 'all';
+
+function validMachines(list){
+  return Array.isArray(list) && list.length === 2 &&
+    list.every((m, i) => m && m.id === DEFAULT_MACHINES[i].id && typeof m.name === 'string' && m.name.trim());
+}
+function machineName(id){
+  const m = machines.find(x => x.id === (id || 'A'));
+  return m ? m.name : (id || 'A');
+}
+function machineColor(id){ return MACHINE_COLORS[id || 'A'] || MACHINE_COLORS.A; }
+function otherMachine(id){ return (id || 'A') === 'A' ? 'B' : 'A'; }
+function toolMachine(tool){ return tool.machine || 'A'; }
+function saveMachines(){
+  try{
+    localStorage.setItem(MACHINES_KEY, JSON.stringify(machines));
+    localStorage.setItem(ACTIVE_MACHINE_KEY, activeMachine);
+  } catch(e){}
+}
 let pendingResetToolId = null;
 
 function t(){ return I18N[currentLang]; }
@@ -1407,7 +1516,15 @@ function loadTools(){
   // garante que toda ferramenta tenha uma posição manual definida
   tools.forEach((tool, i) => {
     if(typeof tool.order !== 'number') tool.order = i;
+    // ferramentas antigas (antes das 2 máquinas) ficam na primeira máquina
+    if(!tool.machine) tool.machine = 'A';
   });
+  try{
+    const rawM = JSON.parse(localStorage.getItem(MACHINES_KEY) || 'null');
+    if(validMachines(rawM)) machines = rawM;
+    const am = localStorage.getItem(ACTIVE_MACHINE_KEY);
+    if(am === 'A' || am === 'B') activeMachine = am;
+  } catch(e){}
 }
 
 function saveTools(){
@@ -1425,7 +1542,8 @@ function saveTools(){
 document.getElementById('btnBackup').addEventListener('click', () => {
   const payload = {
     app: 'controle-ferramentas',
-    version: 1,
+    version: 2,
+    machines,
     exportedAt: new Date().toISOString(),
     tools
   };
@@ -1455,7 +1573,12 @@ document.getElementById('restoreFile').addEventListener('change', (e) => {
       if(!data || !Array.isArray(data.tools)) throw new Error('invalid');
       if(!confirm(t().restoreConfirm)) { e.target.value = ''; return; }
       tools = data.tools;
-      tools.forEach((tool, i) => { if(typeof tool.order !== 'number') tool.order = i; });
+      tools.forEach((tool, i) => {
+        if(typeof tool.order !== 'number') tool.order = i;
+        if(!tool.machine) tool.machine = 'A';
+      });
+      if(validMachines(data.machines)) machines = data.machines;
+      saveMachines();
       saveTools();
       render();
       alert(t().restoreSuccess);
@@ -1524,7 +1647,15 @@ function matchesSearch(tool){
 
 /* ---------- form toggle ---------- */
 const formCard = document.getElementById('formCard');
+function refreshFormMachine(){
+  const d = t();
+  document.getElementById('formMachine').innerHTML =
+    `<span class="dot" style="background:${machineColor(activeMachine)}"></span>` +
+    `<span>${d.formMachine()}</span> <b>${escapeHtml(machineName(activeMachine))}</b>`;
+  document.getElementById('f-copy-label').textContent = d.copyToOther(machineName(otherMachine(activeMachine)));
+}
 document.getElementById('toggleForm').addEventListener('click', () => {
+  refreshFormMachine();
   formCard.classList.add('open');
   buildHolderGrid('f-holder-grid', null);
   refreshColletModelSuggestions();
@@ -1625,8 +1756,10 @@ document.getElementById('saveForm').addEventListener('click', () => {
     return;
   }
 
-  tools.push({
-    id: 't' + Date.now(),
+  const copyOther = document.getElementById('f-copy-other').checked;
+  const makeTool = (machine, idSuffix) => ({
+    id: 't' + Date.now() + idSuffix,
+    machine,
     name, partmodel, unit, maxlife,
     order: tools.length,
     alertPct: Math.min(99, Math.max(1, alertPct)),
@@ -1641,6 +1774,9 @@ document.getElementById('saveForm').addEventListener('click', () => {
     } : { enabled: false, model: null, intervalDays: null, lastChange: null },
     history: []
   });
+  tools.push(makeTool(activeMachine, ''));
+  if(copyOther) tools.push(makeTool(otherMachine(activeMachine), 'b'));
+  document.getElementById('f-copy-other').checked = false;
 
   document.getElementById('f-name').value = '';
   document.getElementById('f-partmodel').value = '';
@@ -1665,6 +1801,7 @@ function openBatchModal(){
   const dict = t();
   document.getElementById('b-amount').value = '';
   document.getElementById('b-datetime').value = nowDatetimeLocalValue();
+  document.getElementById('batchSub').textContent = dict.batchSubMachine(machineName(activeMachine));
   renderBatchList();
   batchOverlay.classList.add('open');
 }
@@ -1673,9 +1810,10 @@ function renderBatchList(){
   const dict = t();
   const listEl = document.getElementById('batchList');
   // mantém a mesma ordem que o usuário vê na tela principal
+  const machineTools = tools.filter(x => toolMachine(x) === activeMachine);
   const ordered = sortMode === 'manual'
-    ? [...tools].sort((a,b) => (a.order ?? 0) - (b.order ?? 0))
-    : [...tools].sort((a,b) => (b.used/b.maxlife) - (a.used/a.maxlife));
+    ? [...machineTools].sort((a,b) => (a.order ?? 0) - (b.order ?? 0))
+    : [...machineTools].sort((a,b) => (b.used/b.maxlife) - (a.used/a.maxlife));
 
   listEl.innerHTML = ordered.map(tool => {
     const unitLabel = dict.unitLabel[tool.unit] || tool.unit;
@@ -1885,6 +2023,8 @@ function openEditModal(toolId){
   if(!tool) return;
   editingToolId = toolId;
   document.getElementById('e-name').value = tool.name;
+  document.getElementById('e-machine').innerHTML = machines.map(m =>
+    `<option value="${m.id}"${m.id === toolMachine(tool) ? ' selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
   document.getElementById('e-partmodel').value = tool.partmodel;
   document.getElementById('e-unit').value = tool.unit;
   document.getElementById('e-maxlife').value = tool.maxlife;
@@ -1939,6 +2079,7 @@ document.getElementById('confirmEdit').addEventListener('click', () => {
   tool.alertPct = Math.min(99, Math.max(1, alertPct));
   tool.used = used;
   tool.holder = holder || null;
+  tool.machine = document.getElementById('e-machine').value || toolMachine(tool);
   tool.collet = colletEnabled ? {
     enabled: true,
     model: colletModel || null,
@@ -2168,7 +2309,7 @@ function accessoryBlockHtml(tool, dict){
 
   let html = '<div class="accessory-block">';
   if(hasHolder){
-    html += `<div class="accessory-row"><span class="k">${dict.holderLabel}</span><span class="v">${escapeHtml(tool.holder)}</span></div>`;
+    html += `<div class="accessory-row holder-row"><span class="k">${dict.holderLabel}</span><span class="v">(${escapeHtml(tool.holder)})</span></div>`;
   }
   if(collet){
     const modelTxt = (tool.collet && tool.collet.model) ? `<span class="collet-model">${escapeHtml(tool.collet.model)}</span>` : '';
@@ -2210,8 +2351,44 @@ function escapeHtml(str){
   return d.innerHTML;
 }
 
+function renderMachineTabs(){
+  const el = document.getElementById('machineTabs');
+  el.innerHTML = machines.map(m => {
+    const on = m.id === activeMachine;
+    const c = machineColor(m.id);
+    const style = on ? `background:${c};border-color:${c};` : '';
+    return `<button class="machine-tab${on ? ' active' : ''}" data-machine-tab="${m.id}" style="${style}">`
+      + `<span class="dot" style="background:${c}"></span>${escapeHtml(m.name)}</button>`;
+  }).join('');
+  el.querySelectorAll('[data-machine-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-machine-tab');
+      if(id === activeMachine) return;
+      activeMachine = id;
+      saveMachines();
+      formCard.classList.remove('open');
+      render();
+      window.scrollTo(0,0);
+    });
+  });
+}
+
+document.getElementById('btnRenameMachine').addEventListener('click', () => {
+  const current = machineName(activeMachine);
+  const val = prompt(t().renameMachinePrompt(current), current);
+  if(val === null) return;
+  const name = val.trim();
+  if(!name) return;
+  machines = machines.map(m => m.id === activeMachine ? { ...m, name } : m);
+  saveMachines();
+  render();
+});
+
 function render(){
   const dict = t();
+  renderMachineTabs();
+  if(formCard.classList.contains('open')) refreshFormMachine();
+  const machineTools = tools.filter(x => toolMachine(x) === activeMachine);
   const listEl = document.getElementById('toolList');
   const filterBar = document.getElementById('filterBar');
   const filterSelect = document.getElementById('filterPart');
@@ -2219,10 +2396,11 @@ function render(){
   listEl.innerHTML = '';
 
   const partModels = [...new Set(tools.map(x => x.partmodel).filter(Boolean))].sort();
+  const machineParts = [...new Set(machineTools.map(x => x.partmodel).filter(Boolean))].sort();
   const currentFilter = filterSelect.value;
   filterSelect.innerHTML = `<option value="">${dict.allParts}</option>` +
-    partModels.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
-  filterSelect.value = partModels.includes(currentFilter) ? currentFilter : '';
+    machineParts.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+  filterSelect.value = machineParts.includes(currentFilter) ? currentFilter : '';
   datalist.innerHTML = partModels.map(p => `<option value="${escapeHtml(p)}">`).join('');
 
   filterBar.style.display = tools.length > 0 ? 'flex' : 'none';
@@ -2230,17 +2408,17 @@ function render(){
   document.getElementById('sortBar').style.display = tools.length > 0 ? 'flex' : 'none';
   document.getElementById('sortMode').value = sortMode;
 
-  if(tools.length === 0){
+  if(machineTools.length === 0){
     const empty = document.createElement('div');
     empty.className = 'empty';
     empty.style.whiteSpace = 'pre-line';
-    empty.textContent = dict.empty;
+    empty.textContent = tools.length === 0 ? dict.empty : dict.emptyMachine(machineName(activeMachine));
     listEl.appendChild(empty);
     return;
   }
 
   const activeFilter = filterSelect.value;
-  let filtered = activeFilter ? tools.filter(x => x.partmodel === activeFilter) : tools;
+  let filtered = activeFilter ? machineTools.filter(x => x.partmodel === activeFilter) : machineTools;
 
   if(filtered.length === 0){
     const empty = document.createElement('div');
@@ -2271,6 +2449,7 @@ function render(){
 
     const card = document.createElement('div');
     card.className = 'tool-card';
+    card.style.borderColor = machineColor(toolMachine(tool));
 
     const statusLabel = status === 'ok' ? dict.statusOk : (status === 'warn' ? dict.statusWarn : dict.statusDanger);
     const lastChangeText = tool.lastChange
@@ -2282,7 +2461,10 @@ function render(){
         <div>
           <div class="tool-name">${escapeHtml(tool.name)}</div>
           <div class="tool-meta">${dict.lastChange}: ${lastChangeText}</div>
-          <div class="part-badge">${escapeHtml(tool.partmodel || '—')}</div>
+          <div class="badge-row">
+            <div class="part-badge">${escapeHtml(tool.partmodel || '—')}</div>
+            <span class="machine-badge" style="background:${machineColor(toolMachine(tool))}">${escapeHtml(machineName(toolMachine(tool)))}</span>
+          </div>
         </div>
         <div class="status-pill ${status}">${statusLabel}</div>
       </div>
@@ -2603,7 +2785,7 @@ function renderReportCharts(toolList, dict){
 
   var byTool = {};
   resets.forEach(function(r){
-    var k = r.tool.name || '\u2014';
+    var k = (reportScope === 'all' ? machineName(toolMachine(r.tool)) + ' \u00b7 ' : '') + (r.tool.name || '\u2014');
     byTool[k] = (byTool[k] || 0) + 1;
   });
 
@@ -2614,13 +2796,37 @@ function renderReportCharts(toolList, dict){
                       prepareChartRows(byTool, dict.chartOther), total);
 }
 
+function renderReportScope(){
+  const d = t();
+  const el = document.getElementById('reportScope');
+  const opts = [{ id: 'all', name: d.reportAll }].concat(machines);
+  el.innerHTML = `<span>${d.reportScopeLabel}</span>` + opts.map(o =>
+    `<button class="${o.id === reportScope ? 'active' : ''}" data-report-scope="${o.id}">${escapeHtml(o.name)}</button>`).join('');
+  el.querySelectorAll('[data-report-scope]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      reportScope = btn.getAttribute('data-report-scope');
+      buildReport();
+    });
+  });
+}
+
 document.getElementById('btnReport').addEventListener('click', () => {
+  reportScope = 'all';
+  buildReport();
+  document.body.classList.add('printing');
+  window.scrollTo(0,0);
+});
+
+function buildReport(){
   const dict = t();
+  renderReportScope();
+  const scopeTools = reportScope === 'all' ? tools : tools.filter(x => toolMachine(x) === reportScope);
   const rows = [];
-  tools.forEach(tool => {
+  scopeTools.forEach(tool => {
     (tool.history || []).forEach(h => {
       if(h.type === 'reset'){
         rows.push({
+          machine: machineName(toolMachine(tool)),
           part: tool.partmodel || '—',
           tool: tool.name + ((h.holder || tool.holder) ? ' (' + dict.holderLabel + ' ' + (h.holder || tool.holder) + ')' : ''),
           date: new Date(h.date),
@@ -2632,6 +2838,7 @@ document.getElementById('btnReport').addEventListener('click', () => {
         });
       } else if(h.type === 'collet'){
         rows.push({
+          machine: machineName(toolMachine(tool)),
           part: tool.partmodel || '—',
           tool: (tool.name || '') + ' — ' + dict.colletLabel + ((tool.collet && tool.collet.model) ? ' ' + tool.collet.model : '') + (tool.holder ? ' (' + dict.holderLabel + ' ' + tool.holder + ')' : ''),
           date: new Date(h.date),
@@ -2646,22 +2853,24 @@ document.getElementById('btnReport').addEventListener('click', () => {
   });
   rows.sort((a,b) => b.date - a.date);
 
-  document.getElementById('reportTitle').textContent = dict.reportTitle;
+  const scopeName = reportScope === 'all' ? dict.reportScopeAll : machineName(reportScope);
+  document.getElementById('reportTitle').textContent = `${dict.reportTitle} — ${scopeName}`;
   document.getElementById('reportMeta').textContent =
     `${dict.reportGenerated}: ${new Date().toLocaleString(currentLang==='pt' ? 'pt-BR' : 'ja-JP')}`;
 
-  renderReportCharts(tools, dict);
+  renderReportCharts(scopeTools, dict);
 
   const headRow = document.getElementById('reportHeadRow');
-  headRow.innerHTML = ['colPart','colTool','colDate','colCondition','colReason','colQty','colUnit','colNote']
+  headRow.innerHTML = ['colMachine','colPart','colTool','colDate','colCondition','colReason','colQty','colUnit','colNote']
     .map(k => `<th>${dict[k]}</th>`).join('');
 
   const body = document.getElementById('reportBody');
   if(rows.length === 0){
-    body.innerHTML = `<tr><td colspan="8">${dict.reportEmpty}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="9">${dict.reportEmpty}</td></tr>`;
   } else {
     body.innerHTML = rows.map(r => `
       <tr>
+        <td>${escapeHtml(r.machine)}</td>
         <td>${escapeHtml(r.part)}</td>
         <td>${escapeHtml(r.tool)}</td>
         <td>${r.date.toLocaleDateString(currentLang==='pt' ? 'pt-BR' : 'ja-JP')}</td>
@@ -2673,10 +2882,7 @@ document.getElementById('btnReport').addEventListener('click', () => {
       </tr>
     `).join('');
   }
-
-  document.body.classList.add('printing');
-  window.scrollTo(0,0);
-});
+}
 
 document.getElementById('reportPrintBtn').addEventListener('click', () => {
   // chamado diretamente pelo toque do usuário — preserva o gesto exigido pelo Safari/iPadOS
