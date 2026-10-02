@@ -673,6 +673,15 @@ header p{ margin: 2px 0 0; color: var(--muted); font-size: 10.5px; }
 }
 .hist-empty{ text-align:center; color: var(--muted); font-size: 12.5px; padding: 16px; }
 
+.backup-status{
+  width:100%; display:block;
+  background: var(--panel); border:1px solid var(--line); color: var(--muted);
+  font-family:'IBM Plex Mono','Noto Sans JP',sans-serif; font-size: 12px; font-weight:600;
+  padding: 10px 12px; border-radius: 8px; margin-bottom: 14px; cursor:pointer; text-align:center;
+}
+.backup-status.warn{ color: var(--amber); border-color: var(--amber); background: rgba(255,177,0,0.08); }
+.backup-status.danger{ color: var(--danger); border-color: rgba(255,93,93,0.6); background: rgba(255,93,93,0.08); }
+.app-version{ text-align:center; color: var(--muted); font-size: 11px; margin-top: 6px; }
 footer{ text-align:center; color: var(--line); font-size: 11px; margin-top: 20px; }
 .savenote{ text-align:center; color: var(--muted); font-size:11px; margin-top:4px; min-height:14px; }
 
@@ -851,6 +860,8 @@ body.printing #reportArea{
     <input type="file" id="restoreFile" accept=".json,application/json,text/plain,text/json">
   </div>
 
+  <button class="backup-status" id="backupStatus"></button>
+
   <button class="add-btn batch" id="btnBatch" data-i18n="batchBtn">⚡ Registrar em várias ferramentas</button>
   <button class="add-btn copy" id="btnCopyTools" style="display:none;"></button>
   <button class="add-btn" id="toggleForm" data-i18n="addToolBtn">+ Nova ferramenta</button>
@@ -951,6 +962,7 @@ body.printing #reportArea{
 
   <div class="savenote" id="saveNote"></div>
   <footer data-i18n="footer">dados salvos automaticamente neste aparelho, offline</footer>
+  <div class="app-version" id="appVersion"></div>
 </div>
 
 <!-- modal: motivo da troca -->
@@ -1311,6 +1323,13 @@ const I18N = {
     fillRequiredReason: "Preencha o motivo da troca.",
     resetModalSub: (name, used, unit) => `${name} — usado até agora: ${used} ${unit}`,
     restoreConfirm: "Isso vai SUBSTITUIR os dados atuais deste aparelho pelo backup selecionado. Continuar?",
+    backupNever: "⚠ Nenhum backup feito neste aparelho — toque para fazer agora",
+    backupToday: "Último backup: hoje ✓",
+    backupDays: (n) => n === 1 ? "Último backup: ontem" : `Último backup: há ${n} dias`,
+    backupOld: (n) => `⚠ Último backup: há ${n} dias — toque para fazer agora`,
+    restoreInfo: (o) => `BACKUP SELECIONADO\nData: ${o.date}\nMáquinas: ${o.machines}\nFerramentas: ${o.count}\n\nDADOS ATUAIS DESTE APARELHO\nMáquinas: ${o.curMachines}\nFerramentas: ${o.curCount}\n\n${o.mismatch ? '⚠ ATENÇÃO: as máquinas do backup são DIFERENTES das deste aparelho. Confira se escolheu o arquivo certo.\n\n' : ''}Os dados atuais serão SUBSTITUÍDOS pelo backup. Continuar?`,
+    restoreOldFormat: "versão antiga (sem máquinas)",
+    restoreUnknownDate: "desconhecida",
     restoreSuccess: "Backup restaurado com sucesso.",
     restoreError: "Arquivo inválido. Selecione um backup exportado por este app.",
     reportTitle: "Relatório de Trocas de Ferramentas",
@@ -1467,6 +1486,13 @@ const I18N = {
     fillRequiredReason: "交換理由を入力してください。",
     resetModalSub: (name, used, unit) => `${name} — 現在までの使用量: ${used} ${unit}`,
     restoreConfirm: "この端末の現在のデータをバックアップの内容で置き換えます。よろしいですか?",
+    backupNever: "⚠ この端末ではまだバックアップがありません — タップして今すぐ実行",
+    backupToday: "前回のバックアップ:今日 ✓",
+    backupDays: (n) => n === 1 ? "前回のバックアップ:昨日" : `前回のバックアップ:${n}日前`,
+    backupOld: (n) => `⚠ 前回のバックアップ:${n}日前 — タップして今すぐ実行`,
+    restoreInfo: (o) => `選択したバックアップ\n日時:${o.date}\n機械:${o.machines}\n工具数:${o.count}\n\nこの端末の現在のデータ\n機械:${o.curMachines}\n工具数:${o.curCount}\n\n${o.mismatch ? '⚠ 注意:バックアップの機械がこの端末と異なります。ファイルを確認してください。\n\n' : ''}現在のデータはバックアップで置き換えられます。よろしいですか?`,
+    restoreOldFormat: "旧バージョン(機械情報なし)",
+    restoreUnknownDate: "不明",
     restoreSuccess: "バックアップを復元しました。",
     restoreError: "無効なファイルです。このアプリで作成したバックアップを選択してください。",
     reportTitle: "工具交換レポート",
@@ -1512,6 +1538,9 @@ let searchTerm = '';
 const STORAGE_KEY = 'ferramentas_tools_v1';
 const SORTMODE_KEY = 'ferramentas_sortmode_v1';
 const MACHINES_KEY = 'ferramentas_machines_v1';
+const APP_VERSION = 'v2026.10.2';
+const LAST_BACKUP_KEY = 'ferramentas_lastbackup_v1';
+const BACKUP_WARN_DAYS = 7;
 const ACTIVE_MACHINE_KEY = 'ferramentas_activemachine_v1';
 // código interno fixo (A/B); o nome é só a etiqueta e pode ser renomeado
 const MACHINE_COLORS = { A: '#a58bff', B: '#ff7a45' };
@@ -1591,13 +1620,37 @@ document.getElementById('btnBackup').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const stamp = new Date().toISOString().slice(0,10);
+  const stamp = todayISODate();
+  const machinesTag = machines.map(m => m.name.replace(/[^A-Za-z0-9]/g, '')).join('-') || 'ferramentas';
   a.href = url;
-  a.download = `backup-ferramentas-${stamp}.json`;
+  a.download = `backup-${machinesTag}-${stamp}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  try{ localStorage.setItem(LAST_BACKUP_KEY, new Date().toISOString()); } catch(err){}
+  renderBackupStatus();
+});
+
+function renderBackupStatus(){
+  const d = t();
+  const el = document.getElementById('backupStatus');
+  let last = null;
+  try{ last = localStorage.getItem(LAST_BACKUP_KEY); } catch(e){}
+  el.classList.remove('warn','danger');
+  if(!last){
+    el.textContent = d.backupNever;
+    el.classList.add('danger');
+    return;
+  }
+  const startOf = (dt) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
+  const days = Math.round((startOf(new Date()) - startOf(new Date(last))) / 86400000);
+  if(days <= 0) el.textContent = d.backupToday;
+  else if(days < BACKUP_WARN_DAYS) el.textContent = d.backupDays(days);
+  else { el.textContent = d.backupOld(days); el.classList.add('warn'); }
+}
+document.getElementById('backupStatus').addEventListener('click', () => {
+  document.getElementById('btnBackup').click();
 });
 
 document.getElementById('btnRestore').addEventListener('click', () => {
@@ -1612,7 +1665,21 @@ document.getElementById('restoreFile').addEventListener('change', (e) => {
     try{
       const data = JSON.parse(reader.result);
       if(!data || !Array.isArray(data.tools)) throw new Error('invalid');
-      if(!confirm(t().restoreConfirm)) { e.target.value = ''; return; }
+      const d = t();
+      const locale = currentLang === 'pt' ? 'pt-BR' : 'ja-JP';
+      const hasMachines = validMachines(data.machines);
+      const countBy = (list, mlist) => mlist.map(m =>
+        `${m.name} (${list.filter(x => (x.machine || 'A') === m.id).length})`).join(' / ');
+      const info = {
+        date: data.exportedAt ? new Date(data.exportedAt).toLocaleString(locale) : d.restoreUnknownDate,
+        machines: hasMachines ? countBy(data.tools, data.machines) : d.restoreOldFormat,
+        count: data.tools.length,
+        curMachines: countBy(tools, machines),
+        curCount: tools.length,
+        mismatch: hasMachines && tools.length > 0 &&
+          data.machines.map(m => m.name).join('|') !== machines.map(m => m.name).join('|')
+      };
+      if(!confirm(d.restoreInfo(info))) { e.target.value = ''; return; }
       tools = data.tools;
       tools.forEach((tool, i) => {
         if(typeof tool.order !== 'number') tool.order = i;
@@ -1647,6 +1714,8 @@ function applyLang(lang){
   document.getElementById('btn-ja').classList.toggle('active', lang==='ja');
   document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'ja';
   document.getElementById('searchInput').placeholder = I18N[lang].searchPlaceholder;
+  document.getElementById('appVersion').textContent = APP_VERSION;
+  renderBackupStatus();
   render();
 }
 document.getElementById('btn-pt').addEventListener('click', () => applyLang('pt'));
@@ -3048,3 +3117,4 @@ applyLang('pt');
 
 </body>
 </html>
+g
