@@ -1337,18 +1337,19 @@ const I18N = {
     chartByTool: "Trocas por ferramenta",
     chartNoData: "Sem trocas registradas para gerar os gráficos.",
     chartOther: "outras ({n})",
-    chartTotalLabel: (n) => `total: ${n}`,
+    chartTotalLabel: (n) => `total: ${n} ${n === 1 ? 'troca' : 'trocas'}`,
+    chartCount: (n) => `${n} ${n === 1 ? 'troca' : 'trocas'}`,
     reportGenerated: "Gerado em",
     reportEmpty: "Nenhuma troca registrada ainda.",
-    colPart: "Modelo da Peça",
+    colPart: "Peça",
     colTool: "Ferramenta",
-    colDate: "Data da Troca",
-    colCondition: "Condição Instalada",
+    colDate: "Data",
+    colCondition: "Condição",
     colReason: "Motivo",
-    colQty: "Ciclo / Quantidade na Troca",
-    colUnit: "Unidade",
-    colNote: "Observação",
-    colMachine: "Máquina",
+    colQty: "Qtd.",
+    colUnit: "Un.",
+    colNote: "Obs.",
+    colMachine: "Máq.",
     fieldMachine: "Máquina",
     renameMachinePrompt: (name) => `Novo nome para a máquina "${name}":`,
     formMachine: (name) => `Será cadastrada em`,
@@ -1501,6 +1502,7 @@ const I18N = {
     chartNoData: "グラフを作成するための交換記録がありません。",
     chartOther: "その他 ({n}件)",
     chartTotalLabel: (n) => `合計: ${n}件`,
+    chartCount: (n) => `${n}件`,
     reportGenerated: "作成日時",
     reportEmpty: "交換履歴はまだありません。",
     colPart: "製品モデル",
@@ -1508,7 +1510,7 @@ const I18N = {
     colDate: "交換日",
     colCondition: "取付状態",
     colReason: "理由",
-    colQty: "交換時の数量/サイクル",
+    colQty: "数量",
     colUnit: "単位",
     colNote: "備考",
     colMachine: "機械",
@@ -1538,7 +1540,7 @@ let searchTerm = '';
 const STORAGE_KEY = 'ferramentas_tools_v1';
 const SORTMODE_KEY = 'ferramentas_sortmode_v1';
 const MACHINES_KEY = 'ferramentas_machines_v1';
-const APP_VERSION = 'v2026.10.2';
+const APP_VERSION = 'v2026.10.3';
 const LAST_BACKUP_KEY = 'ferramentas_lastbackup_v1';
 const BACKUP_WARN_DAYS = 7;
 const ACTIVE_MACHINE_KEY = 'ferramentas_activemachine_v1';
@@ -2920,13 +2922,13 @@ function buildLegendHtml(rows, total){
   return '<div class="chart-legend">' + rows.map(function(r){
     var pct = Math.round((r.value / total) * 100);
     return '<span class="chart-legend-item"><span class="chart-swatch" style="background:' + r.color + '"></span>'
-         + escapeHtml(r.label) + ' ' + r.value + ' \u00b7 ' + pct + '%</span>';
+         + escapeHtml(r.label) + ' \u2014 ' + t().chartCount(r.value) + ' (' + pct + '%)</span>';
   }).join('') + '</div>';
 }
 
 // (A) barras detalhadas com valor e percentual
 function buildBarsSvg(rows, total){
-  var rowH = 22, gap = 8, labelW = 178, valueW = 96, chartW = 700;
+  var rowH = 22, gap = 8, labelW = 178, valueW = 130, chartW = 700;
   var barArea = chartW - labelW - valueW;
   var height = rows.length * (rowH + gap);
   var maxVal = Math.max.apply(null, rows.map(function(r){ return r.value; }).concat([1]));
@@ -2937,7 +2939,7 @@ function buildBarsSvg(rows, total){
     var pct = Math.round((r.value / total) * 100);
     return '<text x="0" y="' + (y + rowH * 0.72) + '" font-family="Arial, sans-serif" font-size="11.5" fill="#000">' + escapeHtml(r.label) + '</text>'
          + '<rect x="' + labelW + '" y="' + (y + 3) + '" width="' + w.toFixed(1) + '" height="' + (rowH - 6) + '" rx="3" fill="' + r.color + '"/>'
-         + '<text x="' + (labelW + w + 8) + '" y="' + (y + rowH * 0.72) + '" font-family="Arial, sans-serif" font-size="11.5" font-weight="bold" fill="#000">' + r.value + ' \u00b7 ' + pct + '%</text>';
+         + '<text x="' + (labelW + w + 8) + '" y="' + (y + rowH * 0.72) + '" font-family="Arial, sans-serif" font-size="11.5" font-weight="bold" fill="#000">' + t().chartCount(r.value) + ' (' + pct + '%)</text>';
   }).join('');
 
   return '<svg viewBox="0 0 ' + chartW + ' ' + height + '" xmlns="http://www.w3.org/2000/svg" role="img">' + body + '</svg>';
@@ -3117,4 +3119,3 @@ applyLang('pt');
 
 </body>
 </html>
-g
